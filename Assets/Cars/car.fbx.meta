@@ -1,0 +1,452 @@
+fileFormatVersion: 2
+guid: 13543bfd383974be480ef6c6c799a9de
+timeCreated: 1463071186
+licenseType: Free
+ModelImporter:
+  serializedVersion: 19
+  fileIDToRecycleName:
+    100000: _body
+    100002: _top plate
+    100004: _top plate.001
+    100006: _wheel.FL
+    100008: _wheel.FR
+    100010: _wheel.RL
+    100012: _wheel.RR
+    100014: brake disk.000
+    100016: brake disk.001
+    100018: brake disk.002
+    100020: brake disk.003
+    100022: brake pad.000
+    100024: brake pad.001
+    100026: brake pad.002
+    100028: brake pad.003
+    100030: //RootNode
+    100032: rim base.000
+    100034: rim base.001
+    100036: rim base.002
+    100038: rim base.003
+    100040: rim nut.000
+    100042: rim nut.001
+    100044: rim nut.002
+    100046: rim nut.003
+    100048: rim spikes.000
+    100050: rim spikes.001
+    100052: rim spikes.002
+    100054: rim spikes.003
+    100056: tire.000
+    100058: tire.001
+    100060: tire.002
+    100062: tire.003
+    100064: body
+    100066: bottom plate
+    100068: brake disk FL
+    100070: brake disk FR
+    100072: brake disk RL
+    100074: brake disk RR
+    100076: brake pad FL
+    100078: brake pad FR
+    100080: brake pad RL
+    100082: brake pad RR
+    100084: FL
+    100086: FR
+    100088: rim base FL
+    100090: rim base FR
+    100092: rim base RL
+    100094: rim base RR
+    100096: rim nut FL
+    100098: rim nut FR
+    100100: rim nut RL
+    100102: rim nut RR
+    100104: rim spikes FL
+    100106: rim spikes FR
+    100108: rim spikes RL
+    100110: rim spikes RR
+    100112: RL
+    100114: RR
+    100116: StaticParts
+    100118: tire FL
+    100120: tire FR
+    100122: tire RL
+    100124: tire RR
+    100126: top plate
+    100128: WheelTransforms
+    100130: headlights
+    100132: new_body
+    100134: rear_lights
+    100136: rear_wing
+    100138: rear_wing.001
+    100140: z_old_rear_wing
+    100142: _for edit rotate car X 90deg
+    100144: car
+    100146: floor
+    100148: glass_front
+    100150: glass_front.001
+    100152: headlights_case
+    100154: sidepods
+    100156: roof
+    100158: sidepods.001
+    100160: rear_window
+    100162: new_body_work
+    100164: grill_front
+    100166: grill_rear
+    400000: _body
+    400002: _top plate
+    400004: _top plate.001
+    400006: _wheel.FL
+    400008: _wheel.FR
+    400010: _wheel.RL
+    400012: _wheel.RR
+    400014: brake disk.000
+    400016: brake disk.001
+    400018: brake disk.002
+    400020: brake disk.003
+    400022: brake pad.000
+    400024: brake pad.001
+    400026: brake pad.002
+    400028: brake pad.003
+    400030: //RootNode
+    400032: rim base.000
+    400034: rim base.001
+    400036: rim base.002
+    400038: rim base.003
+    400040: rim nut.000
+    400042: rim nut.001
+    400044: rim nut.002
+    400046: rim nut.003
+    400048: rim spikes.000
+    400050: rim spikes.001
+    400052: rim spikes.002
+    400054: rim spikes.003
+    400056: tire.000
+    400058: tire.001
+    400060: tire.002
+    400062: tire.003
+    400064: body
+    400066: bottom plate
+    400068: brake disk FL
+    400070: brake disk FR
+    400072: brake disk RL
+    400074: brake disk RR
+    400076: brake pad FL
+    400078: brake pad FR
+    400080: brake pad RL
+    400082: brake pad RR
+    400084: FL
+    400086: FR
+    400088: rim base FL
+    400090: rim base FR
+    400092: rim base RL
+    400094: rim base RR
+    400096: rim nut FL
+    400098: rim nut FR
+    400100: rim nut RL
+    400102: rim nut RR
+    400104: rim spikes FL
+    400106: rim spikes FR
+    400108: rim spikes RL
+    400110: rim spikes RR
+    400112: RL
+    400114: RR
+    400116: StaticParts
+    400118: tire FL
+    400120: tire FR
+    400122: tire RL
+    400124: tire RR
+    400126: top plate
+    400128: WheelTransforms
+    400130: headlights
+    400132: new_body
+    400134: rear_lights
+    400136: rear_wing
+    400138: rear_wing.001
+    400140: z_old_rear_wing
+    400142: _for edit rotate car X 90deg
+    400144: car
+    400146: floor
+    400148: glass_front
+    400150: glass_front.001
+    400152: headlights_case
+    400154: sidepods
+    400156: roof
+    400158: sidepods.001
+    400160: rear_window
+    400162: new_body_work
+    400164: grill_front
+    400166: grill_rear
+    2300000: _body
+    2300002: _top plate
+    2300004: _top plate.001
+    2300006: brake disk.000
+    2300008: brake disk.001
+    2300010: brake disk.002
+    2300012: brake disk.003
+    2300014: brake pad.000
+    2300016: brake pad.001
+    2300018: brake pad.002
+    2300020: brake pad.003
+    2300022: rim base.000
+    2300024: rim base.001
+    2300026: rim base.002
+    2300028: rim base.003
+    2300030: rim nut.000
+    2300032: rim nut.001
+    2300034: rim nut.002
+    2300036: rim nut.003
+    2300038: rim spikes.000
+    2300040: rim spikes.001
+    2300042: rim spikes.002
+    2300044: rim spikes.003
+    2300046: tire.000
+    2300048: tire.001
+    2300050: tire.002
+    2300052: tire.003
+    2300054: body
+    2300056: bottom plate
+    2300058: brake disk FL
+    2300060: brake disk FR
+    2300062: brake disk RL
+    2300064: brake disk RR
+    2300066: brake pad FL
+    2300068: brake pad FR
+    2300070: brake pad RL
+    2300072: brake pad RR
+    2300074: rim base FL
+    2300076: rim base FR
+    2300078: rim base RL
+    2300080: rim base RR
+    2300082: rim nut FL
+    2300084: rim nut FR
+    2300086: rim nut RL
+    2300088: rim nut RR
+    2300090: rim spikes FL
+    2300092: rim spikes FR
+    2300094: rim spikes RL
+    2300096: rim spikes RR
+    2300098: tire FL
+    2300100: tire FR
+    2300102: tire RL
+    2300104: tire RR
+    2300106: top plate
+    2300108: headlights
+    2300110: new_body
+    2300112: rear_lights
+    2300114: rear_wing
+    2300116: rear_wing.001
+    2300118: z_old_rear_wing
+    2300120: floor
+    2300122: glass_front
+    2300124: glass_front.001
+    2300126: headlights_case
+    2300128: sidepods
+    2300130: roof
+    2300132: sidepods.001
+    2300134: rear_window
+    2300136: new_body_work
+    2300138: grill_front
+    2300140: grill_rear
+    3300000: _body
+    3300002: _top plate
+    3300004: _top plate.001
+    3300006: brake disk.000
+    3300008: brake disk.001
+    3300010: brake disk.002
+    3300012: brake disk.003
+    3300014: brake pad.000
+    3300016: brake pad.001
+    3300018: brake pad.002
+    3300020: brake pad.003
+    3300022: rim base.000
+    3300024: rim base.001
+    3300026: rim base.002
+    3300028: rim base.003
+    3300030: rim nut.000
+    3300032: rim nut.001
+    3300034: rim nut.002
+    3300036: rim nut.003
+    3300038: rim spikes.000
+    3300040: rim spikes.001
+    3300042: rim spikes.002
+    3300044: rim spikes.003
+    3300046: tire.000
+    3300048: tire.001
+    3300050: tire.002
+    3300052: tire.003
+    3300054: body
+    3300056: bottom plate
+    3300058: brake disk FL
+    3300060: brake disk FR
+    3300062: brake disk RL
+    3300064: brake disk RR
+    3300066: brake pad FL
+    3300068: brake pad FR
+    3300070: brake pad RL
+    3300072: brake pad RR
+    3300074: rim base FL
+    3300076: rim base FR
+    3300078: rim base RL
+    3300080: rim base RR
+    3300082: rim nut FL
+    3300084: rim nut FR
+    3300086: rim nut RL
+    3300088: rim nut RR
+    3300090: rim spikes FL
+    3300092: rim spikes FR
+    3300094: rim spikes RL
+    3300096: rim spikes RR
+    3300098: tire FL
+    3300100: tire FR
+    3300102: tire RL
+    3300104: tire RR
+    3300106: top plate
+    3300108: headlights
+    3300110: new_body
+    3300112: rear_lights
+    3300114: rear_wing
+    3300116: rear_wing.001
+    3300118: z_old_rear_wing
+    3300120: floor
+    3300122: glass_front
+    3300124: glass_front.001
+    3300126: headlights_case
+    3300128: sidepods
+    3300130: roof
+    3300132: sidepods.001
+    3300134: rear_window
+    3300136: new_body_work
+    3300138: grill_front
+    3300140: grill_rear
+    4300000: tire.003
+    4300002: rim nut.003
+    4300004: rim spikes.003
+    4300006: rim base.003
+    4300008: brake pad.003
+    4300010: brake disk.003
+    4300012: brake disk.002
+    4300014: brake pad.002
+    4300016: rim base.002
+    4300018: rim spikes.002
+    4300020: rim nut.002
+    4300022: tire.002
+    4300024: tire.001
+    4300026: rim nut.001
+    4300028: rim spikes.001
+    4300030: rim base.001
+    4300032: brake pad.001
+    4300034: brake disk.001
+    4300036: _top plate.001
+    4300038: _body
+    4300040: _top plate
+    4300042: brake disk.000
+    4300044: brake pad.000
+    4300046: rim base.000
+    4300048: rim spikes.000
+    4300050: rim nut.000
+    4300052: tire.000
+    4300054: brake disk FL
+    4300056: rim base FL
+    4300058: rim spikes FL
+    4300060: rim nut FL
+    4300062: tire FL
+    4300064: tire FR
+    4300066: rim nut FR
+    4300068: rim spikes FR
+    4300070: rim base FR
+    4300072: brake disk FR
+    4300074: brake disk RR
+    4300076: rim base RR
+    4300078: rim spikes RR
+    4300080: rim nut RR
+    4300082: tire RR
+    4300084: tire RL
+    4300086: rim nut RL
+    4300088: rim spikes RL
+    4300090: rim base RL
+    4300092: brake disk RL
+    4300094: body
+    4300096: bottom plate
+    4300098: brake pad FL
+    4300100: brake pad RL
+    4300102: brake pad FR
+    4300104: brake pad RR
+    4300106: top plate
+    4300108: headlights
+    4300110: rear_lights
+    4300112: rear_wing
+    4300114: new_body
+    4300116: rear_wing.001
+    4300118: z_old_rear_wing
+    4300120: floor
+    4300122: glass_front.001
+    4300124: glass_front
+    4300126: headlights_case
+    4300128: sidepods
+    4300130: sidepods.001
+    4300132: roof
+    4300134: rear_window
+    4300136: new_body_work
+    4300138: grill_rear
+    4300140: grill_front
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleRotations: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importBlendShapes: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
