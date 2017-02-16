@@ -6,6 +6,7 @@ using System;
 public class CarController : MonoBehaviour {
 
 	public GameScript Game;
+    public AiInterface AiInt;
 
 	public float throttlePedalValue;
 	public float brakePedalValue;
@@ -98,16 +99,18 @@ public class CarController : MonoBehaviour {
 				if (brakePedalValue < 0) { brakePedalValue = 0.0f; }
 			}
 
-			// accelerate
-			colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear;
-			colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
-			// brake
-			colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
+            // accelerate
+            if (AiInt.AITakingControl == false) { 
+                colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear;
+                colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
+            }
+            // brake
+            colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
 			colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
 			colliderRL.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
 			colliderRR.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
-			// steer
-			colliderFL.steerAngle = maxSteer * steeringValue;
+            // steer
+            colliderFL.steerAngle = maxSteer * steeringValue;
 			colliderFR.steerAngle = maxSteer * steeringValue;
 		}
 	}

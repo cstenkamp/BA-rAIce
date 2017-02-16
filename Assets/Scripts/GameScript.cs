@@ -15,7 +15,9 @@ public class GameScript : MonoBehaviour {
 	// Use this for initialization
 	void Start ()
 	{
-		mode = "menu";
+        if (Display.displays.Length > 1)
+            Display.displays[1].Activate();
+        mode = "menu";
 		CarCamera.SetActive(false);
         MiniMapCamera.SetActive(false);
         OverviewCamera.SetActive(true);

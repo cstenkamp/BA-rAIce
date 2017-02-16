@@ -11,7 +11,14 @@ using System.Diagnostics;
 
 public class AiInterface : MonoBehaviour {
 
-	public PositionTracking Tracking;
+    public WheelCollider colliderRL;
+    public WheelCollider colliderRR;
+    public WheelCollider colliderFL;
+    public WheelCollider colliderFR;
+
+    public bool AITakingControl;
+
+    public PositionTracking Tracking;
 	public CarController Car;
 
 	// for vis display
@@ -31,23 +38,35 @@ public class AiInterface : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void Update ()
+    {
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Reset();
         stopwatch.Start();
-        float[] vec = GetCarStatusVector();
+        float[] vec = GetSpeedStear();
         string tosend = "";
         foreach (float elem in vec)
             tosend = tosend + " " + elem;
         // UnityEngine.Debug.Log(tosend);
-        SynchronousSocketClient.StartClient(tosend);
+        string message = SynchronousSocketClient.StartClient(tosend);
         stopwatch.Stop();
-        UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds);
+        if (message == "turning")
+        {
+            AITakingControl = true;
+            colliderRL.motorTorque = 1200.0f;
+            colliderRR.motorTorque = 1200.0f;
+            UnityEngine.Debug.Log("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+
+        } else
+        {
+            AITakingControl = false;
+            UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+        }
+
     }
 
     void FixedUpdate()
     {
-      
     }
 
     // #############################################
@@ -55,6 +74,13 @@ public class AiInterface : MonoBehaviour {
     // #############################################
 
     // return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
+
+    public float[] GetSpeedStear()
+    {
+        float[] SpeedStearVec = new float[4] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle };
+        return SpeedStearVec;
+    }
+
     public float[,] GetVisionDisplay()
 	{
 		float[,] visArray = new float[arraySizeX,arraySizeY];
@@ -225,7 +251,7 @@ public class AiInterface : MonoBehaviour {
 public class SynchronousSocketClient
 {
 
-    public static void StartClient(string data)
+    public static string StartClient(string data)
     {
         // Data buffer for incoming data.  
         byte[] bytes = new byte[1024];
@@ -278,6 +304,7 @@ public class SynchronousSocketClient
 
             // Converts byte array to string
             theMessage = Encoding.ASCII.GetString(bytes, 0, bytesRec);
+            theMessage = theMessage.Substring(5);
 
             // Continues to read the data till data isn't available
             while (sender.Available > 0)
@@ -292,11 +319,13 @@ public class SynchronousSocketClient
 
             //Closes the Socket connection and releases all resources
             sender.Close();
+            return (theMessage);
         }
         catch (Exception ex)
         {
             UnityEngine.Debug.Log("Exception: {0}" + ex.ToString());
         }
+        return ("");
 
 
     }
