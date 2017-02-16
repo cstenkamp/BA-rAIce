@@ -43,7 +43,7 @@ public class AiInterface : MonoBehaviour {
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Reset();
         stopwatch.Start();
-        float[] vec = GetSpeedStear();
+        float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay();
         string tosend = "";
         foreach (float elem in vec)
             tosend = tosend + " " + elem;
