@@ -104,6 +104,7 @@ public class CarController : MonoBehaviour {
                 colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear;
                 colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
             }
+
             // brake
             colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
 			colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
