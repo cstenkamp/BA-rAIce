@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections;
-using UnityEngine;
 
 using System;
 using System.Net;
@@ -8,23 +7,25 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Text;
 using System.Diagnostics;
+using System.ComponentModel;
+
 
 public class Consts {
-
 	public const int PORT = 5005;
-
+	public const int updatepythonintervalms = 2000;
+	public const int getfrompythonintervalms = 2000;
 }
 
 public class AiInterface : MonoBehaviour {
 
-    public WheelCollider colliderRL;
-    public WheelCollider colliderRR;
-    public WheelCollider colliderFL;
-    public WheelCollider colliderFR;
+	public WheelCollider colliderRL;
+	public WheelCollider colliderRR;
+	public WheelCollider colliderFL;
+	public WheelCollider colliderFR;
 
-    public bool AITakingControl;
+	public bool AITakingControl;
 
-    public PositionTracking Tracking;
+	public PositionTracking Tracking;
 	public CarController Car;
 
 	// for vis display
@@ -38,57 +39,64 @@ public class AiInterface : MonoBehaviour {
 	public GameObject posMarker3;
 	public GameObject posMarker4;
 
+	//for sending to python
+	public long lastpythonupdate =  Environment.TickCount;
+
 	// Use this for initialization
 	void Start () {
-	
+
 	}
-	
+
 	// Update is called once per frame
 	void Update ()
-    {
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Reset();
-        stopwatch.Start();
-        float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay();
-        string tosend = "";
-        foreach (float elem in vec)
+	{
+
+	}
+
+	void FixedUpdate()
+	{
+		Stopwatch stopwatch = new Stopwatch();
+		stopwatch.Reset();
+		stopwatch.Start();
+		float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay(); und ....
+
+		string tosend = "";
+		foreach (float elem in vec)
 			tosend = tosend + " " + elem;
-		UnityEngine.Debug.Log(tosend);
-        string message = SynchronousSocketClient.StartClient(tosend);
-		//string message = "here";
-		stopwatch.Stop();
-        if (message == "turning")
-        {
-            AITakingControl = true;
-            colliderRL.motorTorque = 1200.0f;
-            colliderRR.motorTorque = 1200.0f;
-            UnityEngine.Debug.Log("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+		SendToPython(tosend);
 
-        } else
-        {
-            AITakingControl = false;
-            UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
-        }
+		//TODO: das hier ist noch von als der gleiche socket beides gemacht hat, --> aendern!
+		string message = "here";
 
-    }
+		stopwatch.Stop ();
+		if (message == "turning")
+		{
+			AITakingControl = true;
+			colliderRL.motorTorque = 1200.0f;
+			colliderRR.motorTorque = 1200.0f;
+			UnityEngine.Debug.Log("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
 
-    void FixedUpdate()
-    {
-    }
+		} else
+		{
+			AITakingControl = false;
+			UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+		}
 
-    // #############################################
-    // ########### MAIN GETTER FUNCTIONS ###########
-    // #############################################
+	}
 
-    // return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
+	// #############################################
+	// ########### MAIN GETTER FUNCTIONS ###########
+	// #############################################
 
-    public float[] GetSpeedStear()
-    {
-        float[] SpeedStearVec = new float[4] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle };
-        return SpeedStearVec;
-    }
+	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
 
-    public float[,] GetVisionDisplay()
+	public float[] GetSpeedStear()
+	{
+		float[] SpeedStearVec = new float[4] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle };
+		return SpeedStearVec;
+	}
+
+	public float[,] GetVisionDisplay()
 	{
 		float[,] visArray = new float[arraySizeX,arraySizeY];
 		Vector3 carPos = Car.transform.position;
@@ -103,10 +111,10 @@ public class AiInterface : MonoBehaviour {
 				float Z = carPos.z + xPosDot*Mathf.Sin(carRot*Mathf.PI/180.0f) + Mathf.Cos(carRot*Mathf.PI/180.0f)*zPosDot;
 				visArray[i,j] = Car.CheckSurface(X,Z);
 				// debug
-//				if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
-//				if (i==0 && j==arraySizeY-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
-//				if (i==arraySizeX-1 && j==arraySizeY-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
-//				if (i==arraySizeX-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
+				//				if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
+				//				if (i==0 && j==arraySizeY-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
+				//				if (i==arraySizeX-1 && j==arraySizeY-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
+				//				if (i==arraySizeX-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
 			}
 		}
 		return visArray;
@@ -184,10 +192,10 @@ public class AiInterface : MonoBehaviour {
 		carStatusVector[2] = Car.GetSlip(Car.colliderFR)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[3] = Car.GetSlip(Car.colliderRL)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[4] = Car.GetSlip(Car.colliderRR)[0]; // wheel rotation relative to car  # 1
-//		carStatusVector[5] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
-//		carStatusVector[6] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
-//		carStatusVector[7] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
-//		carStatusVector[8] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
+		//		carStatusVector[5] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
+		//		carStatusVector[6] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
+		//		carStatusVector[7] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
+		//		carStatusVector[8] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
 		// front wheel rotation relative to centerLine rotation									# 2
 		// car rotation relative to centerLine rotation											# 2
 		// car rotation relative to velocity vector												# 1
@@ -237,7 +245,7 @@ public class AiInterface : MonoBehaviour {
 					minDifference = difference;
 				}
 			} 
-	    }
+		}
 		return argClosest;
 	}
 
@@ -246,6 +254,17 @@ public class AiInterface : MonoBehaviour {
 		return 1.0f/Mathf.Sqrt(2.0f*Mathf.PI*sigma)*Mathf.Exp(-Mathf.Pow((x-mu),2.0f)/(2.0f*Mathf.Pow(sigma,2.0f)));
 	}
 
+
+	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
+	// send, and if so, calls AsynchronousClient's StartSenderClient
+	public void SendToPython(string data) {
+		int currtime = Environment.TickCount;
+		if (currtime - lastpythonupdate > Consts.updatepythonintervalms) {
+			AsynchronousClient.StartSenderClientWorkerAsync(data);
+			lastpythonupdate = currtime;
+		}
+	}
+
 }
 
 
@@ -255,261 +274,118 @@ public class AiInterface : MonoBehaviour {
 //########################################################################################################################################
 
 
+//stems from the example... fun thing is only that it simply doesn't run asynchronously, haha.
 
-// State object for receiving data from remote device.  
-public class StateObject {  
-	// Client socket.  
-	public Socket workSocket = null;  
-	// Size of receive buffer.  
-	public const int BufferSize = 256;  
-	// Receive buffer.  
-	public byte[] buffer = new byte[BufferSize];  
-	// Received data string.  
-	public StringBuilder sb = new StringBuilder();  
-}  
+public class AsynchronousClient {  //updating python's value should happen asynchronously, since it doesn't need a return value.
 
-
-public class AsynchronousClient {  
-	// The port number for the remote device.  
-	private const int port = Consts.PORT;  
+	private static string preparestring(string fromwhat) {
+		int len = fromwhat.Length;
+		string ms = len.ToString();
+		while (ms.Length < 5) {
+			ms = "0" + ms;
+		}
+		ms = ms + fromwhat;
+		return ms;
+	}
 
 	// ManualResetEvent instances signal completion.  //Notifies one or more waiting threads that an event has occurred
 	private static ManualResetEvent connectDone = new ManualResetEvent(false);   
 	private static ManualResetEvent sendDone =    new ManualResetEvent(false);  
 	private static ManualResetEvent receiveDone = new ManualResetEvent(false);  
 
-	// The response from the remote device.  
-	private static String response = String.Empty;  
-
-	private static void StartClient(string data) {  
-		// Connect to a remote device.  
+	//we have a sender-client, who every x seconds updates python's status
+	public static void StartSenderClientWorker(string data) {  
 		try {  
-			// Establish the remote endpoint for the socket.  
+			connectDone = new ManualResetEvent(false);   
+			sendDone = new ManualResetEvent(false);  
 			IPHostEntry ipHost = Dns.GetHostEntry("");
 			IPAddress ipAddress = ipHost.AddressList[0];  
-			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, port);  
-
-			// Create a TCP/IP socket.  
-			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);  
-
-			// Socket sender = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-			// Connect to the remote endpoint.  
+			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORT);  
+			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
 			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
 			connectDone.WaitOne();  
-
-			string theMessage = data;
-			int len = theMessage.Length;
-
-			string ms = len.ToString();
-			while (ms.Length < 5)
-			{
-				ms = "0" + ms;
-			}
-			theMessage = ms + theMessage;
-
-
-			// Send test data to the remote device.  
-			Send(client,theMessage);  
+			Send(client,preparestring(data));  
 			sendDone.WaitOne();  
-
-			// Receive the response from the remote device.  
-			Receive(client);  
-			receiveDone.WaitOne();  
-
-			// Write the response to the console.  
-			UnityEngine.Debug.Log("Response received : {0}"+ response);  
-
-			// Release the socket.  
-			client.Shutdown(SocketShutdown.Both);  
+			client.Shutdown(SocketShutdown.Send);  
 			client.Close();  
-
-		} catch (Exception e) {  
-			UnityEngine.Debug.Log(e.ToString());  
-		}  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
 	}  
+
+	public delegate void StartSenderClientWorkerDelegate(string data);
+
+	public static void StartSenderClientWorkerAsync(string data) {
+		StartSenderClientWorkerDelegate worker = new StartSenderClientWorkerDelegate (StartSenderClientWorker);
+		//AsyncCallback completedCallback = new AsyncCallback (null);
+		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
+		worker.BeginInvoke (data, null, async);
+	}
+
 
 	private static void ConnectCallback(IAsyncResult ar) {  
 		try {  
-			// Retrieve the socket from the state object.  
-			Socket client = (Socket) ar.AsyncState;  
-
-			// Complete the connection.  
+			Socket client = (Socket) ar.AsyncState;  // Retrieve the socket from the state object.  
 			client.EndConnect(ar);  
-
-			UnityEngine.Debug.Log("Socket connected to {0}"+ client.RemoteEndPoint.ToString());  
-
-			// Signal that the connection has been made.  
+			//UnityEngine.Debug.Log("Socket connected to {0}"+ client.RemoteEndPoint.ToString());  
 			connectDone.Set();  
-		} catch (Exception e) {  
-			UnityEngine.Debug.Log(e.ToString());  
-		}  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
 	}  
-
-	private static void Receive(Socket client) {  
-		try {  
-			// Create the state object.  
-			StateObject state = new StateObject();  
-			state.workSocket = client;  
-
-			// Begin receiving the data from the remote device.  
-			client.BeginReceive( state.buffer, 0, StateObject.BufferSize, 0,  
-				new AsyncCallback(ReceiveCallback), state);  
-		} catch (Exception e) {  
-			UnityEngine.Debug.Log(e.ToString());  
-		}  
-	}  
-
-	private static void ReceiveCallback( IAsyncResult ar ) {  
-		try {  
-			// Retrieve the state object and the client socket   
-			// from the asynchronous state object.  
-			StateObject state = (StateObject) ar.AsyncState;  
-			Socket client = state.workSocket;  
-
-			// Read data from the remote device.  
-			int bytesRead = client.EndReceive(ar);  
-
-			if (bytesRead > 0) {  
-				// There might be more data, so store the data received so far.  
-				state.sb.Append(Encoding.ASCII.GetString(state.buffer,0,bytesRead));  
-
-				// Get the rest of the data.  
-				client.BeginReceive(state.buffer,0,StateObject.BufferSize,0,  
-					new AsyncCallback(ReceiveCallback), state);  
-			} else {  
-				// All the data has arrived; put it in response.  
-				if (state.sb.Length > 1) {  
-					response = state.sb.ToString();  
-				}  
-				// Signal that all bytes have been received.  
-				receiveDone.Set();  
-			}  
-		} catch (Exception e) {  
-			Console.WriteLine(e.ToString());  
-		}  
-	}  
-
+		
 	private static void Send(Socket client, String data) {  
-		// Convert the string data to byte data using ASCII encoding.  
 		byte[] byteData = Encoding.ASCII.GetBytes(data);  
-
-		// Begin sending the data to the remote device.  
-		client.BeginSend(byteData, 0, byteData.Length, 0,  
-			new AsyncCallback(SendCallback), client);  
+		client.BeginSend(byteData, 0, byteData.Length, 0,  new AsyncCallback(SendCallback), client);  
 	}  
 
 	private static void SendCallback(IAsyncResult ar) {  
 		try {  
-			// Retrieve the socket from the state object.  
-			Socket client = (Socket) ar.AsyncState;  
-
-			// Complete sending the data to the remote device.  
+			Socket client = (Socket) ar.AsyncState;  // Retrieve the socket from the state object. 
 			int bytesSent = client.EndSend(ar);  
-			Console.WriteLine("Sent {0} bytes to server.", bytesSent);  
-
-			// Signal that all bytes have been sent.  
+			//UnityEngine.Debug.Log("Sent {0} bytes to server.", bytesSent);  
 			sendDone.Set();  
-		} catch (Exception e) {  
-			Console.WriteLine(e.ToString());  
-		}  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
+	}  
+		
+
+	private static string response = "";
+
+	private static void ReceiveCallback( IAsyncResult ar ) {  
+		try {  
+			StateObject state = (StateObject) ar.AsyncState;  // Retrieve the state object and the client socket 
+			Socket client = state.workSocket;  
+			int bytesRead = client.EndReceive(ar); // Read data from the remote device. 
+
+			if (bytesRead > 0) {  
+				state.sb.Append(Encoding.ASCII.GetString(state.buffer,0,bytesRead));   //buffer so far...
+				client.BeginReceive(state.buffer,0,StateObject.BufferSize,0, new AsyncCallback(ReceiveCallback), state);  //...look for more
+			} else {  
+				if (state.sb.Length > 1) {  // All the data has arrived; put it in response.  
+					response = state.sb.ToString();  
+				}  
+				receiveDone.Set();  
+			}  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString()); }  
 	}  
 
-	public static int Main(String[] args) {  
-		StartClient("TEST");  
-		return 0;  
+
+	private static void Receive(Socket client) {  
+		try {   
+			StateObject state = new StateObject();  
+			state.workSocket = client;  
+			client.BeginReceive( state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReceiveCallback), state);  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString()); }  
 	}  
+
+
+	// State object for receiving data from remote device.  
+	public class StateObject {  
+		// Client socket.  
+		public Socket workSocket = null;  
+		// Size of receive buffer.  
+		public const int BufferSize = 256;  
+		// Receive buffer.  
+		public byte[] buffer = new byte[BufferSize];  
+		// Received data string.  
+		public StringBuilder sb = new StringBuilder();  
+	}  
+
+
 }  
-
-
-//########################################################################################################################################
-public class SynchronousSocketClient
-{
-
-    public static string StartClient(string data)
-    {
-        // Data buffer for incoming data.  
-        byte[] bytes = new byte[1024];
-
-        try
-        {
-            // Resolves a host name to an IPHostEntry instance           
-            IPHostEntry ipHost = Dns.GetHostEntry("");
-
-            // Gets first IP address associated with a localhost
-            IPAddress ipAddr = ipHost.AddressList[0];
-
-            // Creates a network endpoint
-			IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, Consts.PORT);
-
-            // Create one Socket object to setup Tcp connection
-            Socket sender = new Socket(
-                ipAddr.AddressFamily,// Specifies the addressing scheme
-                SocketType.Stream,   // The type of socket 
-                ProtocolType.Tcp     // Specifies the protocols 
-                );
-
-            sender.NoDelay = false;   // Using the Nagle algorithm
-
-            // Establishes a connection to a remote host
-            sender.Connect(ipEndPoint);
-            UnityEngine.Debug.Log("Socket connected to {0}" + sender.RemoteEndPoint.ToString());
-
-            // Sending message
-            //<Client Quit> is the sign for end of data
-            string theMessage = data;
-            int len = theMessage.Length;
-
-            string ms = len.ToString();
-            while (ms.Length < 5)
-            {
-                ms = "0" + ms;
-            }
-            theMessage = ms + theMessage;
-
-            // byte[] msg = Encoding.Unicode.GetBytes(theMessage + "<Client Quit>");
-            byte[] msg = Encoding.ASCII.GetBytes(theMessage);
-            UnityEngine.Debug.Log(msg);
-
-            // Sends data to a connected Socket.
-            int bytesSend = sender.Send(msg);
-
-            // Receives data from a bound Socket.
-            //TODO das hier wieder 
-//			int bytesRec = sender.Receive(bytes);
-//
-//            // Converts byte array to string
-//            theMessage = Encoding.ASCII.GetString(bytes, 0, bytesRec);
-//            theMessage = theMessage.Substring(5);
-//
-//            // Continues to read the data till data isn't available
-//            while (sender.Available > 0)
-//            {
-//                bytesRec = sender.Receive(bytes);
-//                theMessage += Encoding.Unicode.GetString(bytes, 0, bytesRec);
-//            }
-//            UnityEngine.Debug.Log("The server reply: {0}" + theMessage);
-//
-//            // Disables sends and receives on a Socket.
-//            sender.Shutdown(SocketShutdown.Both);
-//
-//            //Closes the Socket connection and releases all resources
-//            sender.Close();
-            return (theMessage);
-        }
-        catch (Exception ex)
-        {
-            UnityEngine.Debug.Log("Exception: {0}" + ex.ToString());
-        }
-        return ("");
-
-
-    }
-
-    public static int Main(String[] args)
-    {
-        StartClient("hello World!");
-        return 0;
-    }
-
-}
