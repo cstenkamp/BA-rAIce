@@ -11,9 +11,10 @@ using System.ComponentModel;
 
 
 public class Consts {
-	public const int PORT = 5005;
+	public const int PORTSEND = 6435;
+	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 2000;
-	public const int getfrompythonintervalms = 2000;
+	public const int lookforpythonintervalms = 2000;
 }
 
 public class AiInterface : MonoBehaviour {
@@ -41,6 +42,7 @@ public class AiInterface : MonoBehaviour {
 
 	//for sending to python
 	public long lastpythonupdate =  Environment.TickCount;
+	public long lastpythoncheck =  Environment.TickCount;
 
 	// Use this for initialization
 	void Start () {
@@ -65,8 +67,9 @@ public class AiInterface : MonoBehaviour {
 			tosend = tosend + " " + elem;
 		SendToPython(tosend);
 
-		//TODO: das hier ist noch von als der gleiche socket beides gemacht hat, --> aendern!
-		string message = "here";
+		AskForPython();
+		string message = AsynchronousClient.response; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
+
 
 		stopwatch.Stop ();
 		if (message == "turning")
@@ -79,7 +82,7 @@ public class AiInterface : MonoBehaviour {
 		} else
 		{
 			AITakingControl = false;
-			UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+			//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
 		}
 
 	}
@@ -265,6 +268,14 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
+	public void AskForPython() { //asynchron, daher keinen string message returnen!
+		int currtime = Environment.TickCount;
+		if (currtime - lastpythoncheck > Consts.lookforpythonintervalms) {
+			AsynchronousClient.StartGetterClientWorkerAsync ();
+			UnityEngine.Debug.Log ("Asking Python for new Results");
+			lastpythoncheck = currtime;
+		}		
+	}
 }
 
 
@@ -300,7 +311,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			sendDone = new ManualResetEvent(false);  
 			IPHostEntry ipHost = Dns.GetHostEntry("");
 			IPAddress ipAddress = ipHost.AddressList[0];  
-			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORT);  
+			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTSEND);  
 			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
 			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
 			connectDone.WaitOne();  
@@ -318,6 +329,40 @@ public class AsynchronousClient {  //updating python's value should happen async
 		//AsyncCallback completedCallback = new AsyncCallback (null);
 		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
 		worker.BeginInvoke (data, null, async);
+	}
+
+	// The response from the remote device.  
+	public static String response = String.Empty;  
+
+	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll?
+	public static void StartGetterClientWorker() {  
+		try {  
+			connectDone = new ManualResetEvent(false);   
+			sendDone = new ManualResetEvent(false); 
+			receiveDone = new ManualResetEvent(false); 
+			IPHostEntry ipHost = Dns.GetHostEntry("");
+			IPAddress ipAddress = ipHost.AddressList[0];  
+			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTASK);  
+			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
+			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
+			connectDone.WaitOne();  
+
+			Receive(client);  //das ganze ist ja asynchron, das heißt Receive kann nix returnen sondern nur den value updaten.. was aber ja sogar gewünscht ist!
+			receiveDone.WaitOne();  
+
+			client.Shutdown(SocketShutdown.Send);  
+			client.Close();  
+		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
+	}  
+
+
+	public delegate void StartGetterClientWorkerDelegate();
+
+	public static void StartGetterClientWorkerAsync() {
+		StartGetterClientWorkerDelegate worker = new StartGetterClientWorkerDelegate (StartGetterClientWorker);
+		//AsyncCallback completedCallback = new AsyncCallback (null);
+		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
+		worker.BeginInvoke (null, async);
 	}
 
 
@@ -345,8 +390,6 @@ public class AsynchronousClient {  //updating python's value should happen async
 	}  
 		
 
-	private static string response = "";
-
 	private static void ReceiveCallback( IAsyncResult ar ) {  
 		try {  
 			StateObject state = (StateObject) ar.AsyncState;  // Retrieve the state object and the client socket 
@@ -359,6 +402,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			} else {  
 				if (state.sb.Length > 1) {  // All the data has arrived; put it in response.  
 					response = state.sb.ToString();  
+					UnityEngine.Debug.Log ("Python answered: "+response);
 				}  
 				receiveDone.Set();  
 			}  
