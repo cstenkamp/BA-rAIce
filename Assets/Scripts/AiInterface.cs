@@ -15,7 +15,12 @@ public class Consts {
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 2000;
 	public const int lookforpythonintervalms = 2000;
+	public const int MAXAGEPYTHONRESULT = 2000;
 }
+
+
+//================================================================================
+
 
 public class AiInterface : MonoBehaviour {
 
@@ -44,6 +49,8 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythonupdate =  Environment.TickCount;
 	public long lastpythoncheck =  Environment.TickCount;
 
+	//=============================================================================
+
 	// Use this for initialization
 	void Start () {
 
@@ -60,33 +67,41 @@ public class AiInterface : MonoBehaviour {
 		Stopwatch stopwatch = new Stopwatch();
 		stopwatch.Reset();
 		stopwatch.Start();
-		float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay(); und ....
 
+		SendToPython(preparesend());
+
+		AskForPython();
+		if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
+			
+			string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
+			stopwatch.Stop();
+			if (message == "turning") {
+				AITakingControl = true;
+				colliderRL.motorTorque = 1200.0f;
+				colliderRR.motorTorque = 1200.0f;
+				UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+			} else {
+				AITakingControl = false;
+				//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+			}
+		}
+	}
+
+
+	private string preparesend() {
+		
+		float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay(); und ....
 		string tosend = "";
 		foreach (float elem in vec)
 			tosend = tosend + " " + elem;
-		SendToPython(tosend);
 
-		AskForPython();
-		string message = AsynchronousClient.response; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
+		if (!Car.lapClean)
+			tosend = "invalidround";
 
-
-		stopwatch.Stop ();
-		if (message == "turning")
-		{
-			AITakingControl = true;
-			colliderRL.motorTorque = 1200.0f;
-			colliderRR.motorTorque = 1200.0f;
-			UnityEngine.Debug.Log("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
-
-		} else
-		{
-			AITakingControl = false;
-			//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
-		}
-
+		return tosend;
 	}
 
+	//================================================================================
 	// #############################################
 	// ########### MAIN GETTER FUNCTIONS ###########
 	// #############################################
@@ -213,6 +228,8 @@ public class AiInterface : MonoBehaviour {
 		return carStatusVector;
 	}
 
+
+	//================================================================================
 	// #############################################
 	// ############## HELPER FUNCTIONS #############
 	// #############################################
@@ -272,22 +289,19 @@ public class AiInterface : MonoBehaviour {
 		int currtime = Environment.TickCount;
 		if (currtime - lastpythoncheck > Consts.lookforpythonintervalms) {
 			AsynchronousClient.StartGetterClientWorkerAsync ();
-			UnityEngine.Debug.Log ("Asking Python for new Results");
+			//UnityEngine.Debug.Log ("Asking Python for new Results");
 			lastpythoncheck = currtime;
 		}		
 	}
 }
 
 
-
-
-
 //########################################################################################################################################
 
 
-//stems from the example... fun thing is only that it simply doesn't run asynchronously, haha.
+//stems from the Microsoft example... fun thing is only that it simply doesn't run asynchronously, haha.
 
-public class AsynchronousClient {  //updating python's value should happen asynchronously, since it doesn't need a return value.
+public class AsynchronousClient {  //updating python's value should happen asynchronously.
 
 	private static string preparestring(string fromwhat) {
 		int len = fromwhat.Length;
@@ -331,10 +345,16 @@ public class AsynchronousClient {  //updating python's value should happen async
 		worker.BeginInvoke (data, null, async);
 	}
 
-	// The response from the remote device.  
-	public static String response = String.Empty;  
 
-	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll?
+	//================================================================================
+
+	// The response from the remote device.  
+	public class response {
+		public static String str = String.Empty;  
+		public static int timestamp = Environment.TickCount;
+	}
+
+	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll? Ja
 	public static void StartGetterClientWorker() {  
 		try {  
 			connectDone = new ManualResetEvent(false);   
@@ -401,8 +421,9 @@ public class AsynchronousClient {  //updating python's value should happen async
 				client.BeginReceive(state.buffer,0,StateObject.BufferSize,0, new AsyncCallback(ReceiveCallback), state);  //...look for more
 			} else {  
 				if (state.sb.Length > 1) {  // All the data has arrived; put it in response.  
-					response = state.sb.ToString();  
-					UnityEngine.Debug.Log ("Python answered: "+response);
+					response.str = state.sb.ToString();  
+					response.timestamp = Environment.TickCount;
+					//UnityEngine.Debug.Log ("Python answered: "+response);
 				}  
 				receiveDone.Set();  
 			}  
@@ -430,6 +451,5 @@ public class AsynchronousClient {  //updating python's value should happen async
 		// Received data string.  
 		public StringBuilder sb = new StringBuilder();  
 	}  
-
-
+		
 }  
