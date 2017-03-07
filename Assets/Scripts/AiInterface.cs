@@ -8,6 +8,7 @@ using System.Threading;
 using System.Text;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Collections.Generic;
 
 
 public class Consts {
@@ -53,17 +54,15 @@ public class AiInterface : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-
+		SendToPython ("resetannvals");
 	}
 
 	// Update is called once per frame
-	void Update ()
-	{
+	void Update () {
 
 	}
 
-	void FixedUpdate()
-	{
+	void FixedUpdate() {
 		//TODO man sollte einen reset-befehl an den pythonserver schicken können (jedes mal beim neustart, und auch beim probweisen wiederherstellen hier!)
 		//TODO hier sollte definitiv noch hin "IF MODE = ANN", was im Menü ausgewählt wurde!
 		//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
@@ -84,15 +83,15 @@ public class AiInterface : MonoBehaviour {
 				AITakingControl = false;
 				//TODO: eine funktion die jederzeit gecallt werden kann (bspw bei 10% strecke), die die komplette position back-upt!!
 
-				Vector3 newPos = new Vector3(48, 1, 150); 
-				Car.transform.position = newPos;
+				//Vector3 newPos = new Vector3(48, 1, 150); 
+				//Car.transform.position = newPos;
 
 				UnityEngine.Debug.Log ("HEEEEREEEEE");
 
 			} else if (message == "turning") {
 				AITakingControl = true;
-				colliderRL.motorTorque = 1200.0f;
-				colliderRR.motorTorque = 1200.0f;
+				//colliderRL.motorTorque = 1200.0f;
+				//colliderRR.motorTorque = 1200.0f;
 				UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
 			} else {
 				AITakingControl = false;
@@ -104,7 +103,7 @@ public class AiInterface : MonoBehaviour {
 
 	private string preparesend() {
 		
-		float[] vec = GetSpeedStear(); //[,] und GetVisionDisplay(); und ....
+		float[] vec = GetAllInfos();
 		string tosend = "";
 		foreach (float elem in vec)
 			tosend = tosend + " " + elem;
@@ -118,20 +117,56 @@ public class AiInterface : MonoBehaviour {
 	}
 
 	//================================================================================
-	// #############################################
-	// ########### MAIN GETTER FUNCTIONS ###########
-	// #############################################
+	// ################################################################
+	// ################ MAIN GETTER AND SETTER FUNCTIONS ##############
+	// ################################################################
 
-	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
 
-	public float[] GetSpeedStear()
-	{
+	public float[] GetAllInfos() {
+		List<float> all = new List<float> ();
+		all.Add ((float)((int)(Tracking.progress * 100.0f)));
+		all.Add(float.PositiveInfinity);
+		all.AddRange (GetSpeedStear ());
+		all.Add(float.PositiveInfinity);
+		all.AddRange (GetCarStatusVector());
+		all.Add(float.PositiveInfinity);
+
+		//GetVisionDisplay(); und ....  //WIE krieg ich 2dimensionale vektoren da am sinnvollsten zusammen mit 1dimensionalen unter?
+		//GetCenterDistVector
+		//GetProgressVector, wobei wir da ja schon die Frage hatten wie ich den brauche.
+		//GetLookAheadVector
+		//und vom carstatusvektor fehlen noch ganz viele
+
+		return all.ToArray();
+	}
+
+
+	public void ResetCar() {
+
+
+
+		SendToPython ("reset");
+	}
+
+
+
+	public float[] GetSpeedStear() {
 		float[] SpeedStearVec = new float[4] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle };
 		return SpeedStearVec;
 	}
 
-	public float[,] GetVisionDisplay()
-	{
+
+	public void SetSpeedStear(float[] SpeedStearVec) {
+		colliderRL.motorTorque = SpeedStearVec [0];
+		colliderRR.motorTorque = SpeedStearVec [1];
+		colliderFL.steerAngle = SpeedStearVec [2];
+		colliderFR.steerAngle = SpeedStearVec [3];
+	}
+
+
+
+	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
+	public float[,] GetVisionDisplay() {
 		float[,] visArray = new float[arraySizeX,arraySizeY];
 		Vector3 carPos = Car.transform.position;
 		float carRot = Car.transform.eulerAngles.y - 180.0f;
@@ -145,17 +180,20 @@ public class AiInterface : MonoBehaviour {
 				float Z = carPos.z + xPosDot*Mathf.Sin(carRot*Mathf.PI/180.0f) + Mathf.Cos(carRot*Mathf.PI/180.0f)*zPosDot;
 				visArray[i,j] = Car.CheckSurface(X,Z);
 				// debug
-				//				if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
-				//				if (i==0 && j==arraySizeY-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
-				//				if (i==arraySizeX-1 && j==arraySizeY-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
-				//				if (i==arraySizeX-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
+//								if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
+//								if (i==0 && j==arraySizeY-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
+//								if (i==arraySizeX-1 && j==arraySizeY-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
+//								if (i==arraySizeX-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
 			}
 		}
 		return visArray;
 	}
 
-	public float[] GetCenterDistVector(int vectorLength=15, float spacing=1.0f, float sigma=1.0f) // needs vis. display
-	{
+
+
+
+
+	public float[] GetCenterDistVector(int vectorLength=15, float spacing=1.0f, float sigma=1.0f) { // needs vis. display 
 		// car-centered: where is the center line of the race track relative to my car?
 		float centerLineDist = Tracking.GetCenterDist(); // positive if the center line is to the left, negative if it is to the right
 
@@ -175,8 +213,9 @@ public class AiInterface : MonoBehaviour {
 		return centerDistVector;
 	}
 
-	public float[] GetLookAheadVector(int vectorLength=30, float spacing=10.0f)
-	{
+
+
+	public float[] GetLookAheadVector(int vectorLength=30, float spacing=10.0f) {
 		// track-centered: does not take into accout current rotation of the car
 		float progressMeters = Tracking.progress*Tracking.trackLength;
 		float[] lookAhead = new float[vectorLength];
@@ -196,8 +235,9 @@ public class AiInterface : MonoBehaviour {
 		return lookAhead;
 	}
 
-	public float[] GetProgressVector(int vectorLength=10, float sigma=0.1f) // needs vis. display
-	{
+
+
+	public float[] GetProgressVector(int vectorLength=10, float sigma=0.1f) { // needs vis. display 
 		// parameters
 		float spacing = 1.0f / (float)vectorLength;
 
@@ -218,18 +258,20 @@ public class AiInterface : MonoBehaviour {
 		return progressVector;
 	}
 
-	public float[] GetCarStatusVector()
-	{
+
+
+
+	public float[] GetCarStatusVector() {
 		float[] carStatusVector = new float[9]; // length = sum(#) ~=18
-		carStatusVector[0] = Car.velocity/200.0f; // car velocity > split up into more nodes 	# 1
+		carStatusVector[0] = Car.velocity/200.0f; // car velocity > split up into more nodes 	# 1      //why do we need both the velocity and the speed from GetSpeedStear?
 		carStatusVector[1] = Car.GetSlip(Car.colliderFL)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[2] = Car.GetSlip(Car.colliderFR)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[3] = Car.GetSlip(Car.colliderRL)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[4] = Car.GetSlip(Car.colliderRR)[0]; // wheel rotation relative to car  # 1
-		//		carStatusVector[5] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
-		//		carStatusVector[6] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
-		//		carStatusVector[7] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
-		//		carStatusVector[8] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
+		carStatusVector[5] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[6] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[7] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[8] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
 		// front wheel rotation relative to centerLine rotation									# 2
 		// car rotation relative to centerLine rotation											# 2
 		// car rotation relative to velocity vector												# 1
@@ -243,6 +285,17 @@ public class AiInterface : MonoBehaviour {
 		// slip angle RR																		# 1
 		return carStatusVector;
 	}
+
+	public void SetCarStatusFromVector(float[] carStatusVector) {
+		Car.velocity = carStatusVector [0] * 200;
+		//TODO: setslip undso... falls das geht.
+
+	}
+
+
+
+
+
 
 
 	//================================================================================
@@ -289,6 +342,9 @@ public class AiInterface : MonoBehaviour {
 	{
 		return 1.0f/Mathf.Sqrt(2.0f*Mathf.PI*sigma)*Mathf.Exp(-Mathf.Pow((x-mu),2.0f)/(2.0f*Mathf.Pow(sigma,2.0f)));
 	}
+
+
+//================================================================================
 
 
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to

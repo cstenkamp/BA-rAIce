@@ -44,7 +44,7 @@ public class PositionTracking : MonoBehaviour {
 	// Update is called once per frame
 	void Update()
 	{
-		// ShowPerpendicular();
+		// ShowPerpendicular(); // for debugging
 	}
 
 	void FixedUpdate ()
@@ -59,6 +59,10 @@ public class PositionTracking : MonoBehaviour {
 
 	// 	##################### GET TRACK OUTLINE VECTOR #####################
 
+	//wir haben in der mitte der strasse nen mesh an ganz vielen vertikal stehenden planes. Wir wollen nen vektorarrays mit punkten auf der mitte der strecke.
+	//dafur nehmen wir die jeweils die oberen 2 koordindaten dieser planes/meshes, packen sie in eine liste \
+	//und packen solange die vorderen davon ans ende der liste bis der erste dieser meshes genau auf der startziellinie ist.
+	//(es gibt ubrigens mehr von diesen planes je scharfer die kurve ist)
 	Vector3[] MeshToVectorArray (GameObject meshObject, int spacing = 4, int scroll = 22, bool flip = false)
 	{
 		Mesh mesh = meshObject.GetComponent<MeshFilter>().mesh;
@@ -82,6 +86,7 @@ public class PositionTracking : MonoBehaviour {
 		return anchorVector;
 	}
 
+	//bei dieser strecke gehen die meshes entgegen der fahrtrichtung, da mussen wir sie noch drehen
 	Vector3[] FlipVectorArray (Vector3[] varray)
 	{
 		Vector3[] flipped = new Vector3[varray.Length];
@@ -94,6 +99,7 @@ public class PositionTracking : MonoBehaviour {
 		return flipped;
 	}
 
+	//solange die vorderen koordinaten ans ende der liste packen, bis der in der nahe der startziellinie ganz vorne steht
 	Vector3[] ScrollVectorArray (Vector3[] varray, int n)
 	{
 		Vector3[] scrolled = new Vector3[varray.Length];
@@ -107,6 +113,7 @@ public class PositionTracking : MonoBehaviour {
 		return scrolled;
 	}
 
+	//wir wollen spater den prozentualen fortschritt der anchors wissen. Dafur brauchen wir zuerst die lange zwischen 2 stuck (die lange der unterliegenden planes)
 	float[] GetSegmentLengths(Vector3[] anchorVector) 
 	{
 		float[] segmentLengths = new float[anchorVector.Length];
@@ -120,6 +127,7 @@ public class PositionTracking : MonoBehaviour {
 		return segmentLengths;
 	}
 
+	//und anschliessend rechnen wir die kumulierte distanz ab dem startpunkt aus.
 	float[] GetAbsoluteAnchorDistances(float[] segmentLengths)
 	{
 		float[] absoluteAnchorDistances = new float[segmentLengths.Length];
@@ -131,6 +139,7 @@ public class PositionTracking : MonoBehaviour {
 		return absoluteAnchorDistances;
 	}
 
+	//anhand der koordinaten von den vektoren konnen wir sagen wie viel gedreht der nachste punkt in relation zur gerade der 2 vorherigen ist...
 	float[] GetSegmentAngles(Vector3[] anchorVector, bool normalized=false)
 	{
 		float[] segmentAngles = new float[anchorVector.Length];
@@ -157,6 +166,7 @@ public class PositionTracking : MonoBehaviour {
 		return segmentAngles;
 	}
 
+	//...und summieren wir das alles auf haben wir den absoluten winkel von jedem einzelnem anchor. 
 	float[] GetAbsoluteAnchorAngles(float[] segmentAngles)
 	{
 		float[] absoluteAnchorAngles = new float[segmentAngles.Length];
@@ -168,6 +178,7 @@ public class PositionTracking : MonoBehaviour {
 		return absoluteAnchorAngles;
 	}
 
+	//progress eines anchors in prozent von der gesamtlange der strecke 
 	float[] GetAbsoluteAnchorProgress(Vector3[] anchorVector)
 	{
 		float[] segmentLengths = GetSegmentLengths(anchorVector);
@@ -182,6 +193,7 @@ public class PositionTracking : MonoBehaviour {
 		return anchorProgress;
 	}
 
+	//zeigt die vektoren in unity
 	void ShowAnchors(Vector3[] anchorVector, GameObject anchorPrototype, GameObject countText, string hoverText="count") 
 	{
 		for (int i = 0; i < anchorVector.Length; i++) 
@@ -200,10 +212,21 @@ public class PositionTracking : MonoBehaviour {
 		}
 	}
 
+	// so. wir haben jetzt folgende vektor-arrays:
+	//  #  anchor-vektor   segment-length   abs.segm.length   segm.winkel   abs.segm.winkel   progress
+	//  1   pos(anchor1)    ||A1-A0||        ...                                               0.564%
+	// ...
+
 	// #####################################################################
 	// ###################### FUNCTIONS FOR PROGRESS #######################
 	// #####################################################################
 
+	//gets the progress of the car. How? by getting the euclidianly nearest anchor, and also the relative position from the car to this vector (if its +0.4 in front of it for example)
+	//for that, after finding the nearest anchor it takes this one (B), the one before (A) and the one after (C) it, and finds a point (D) on AB as well as BC, which has a vector to the coordinates of the car (P)
+	//which is perpendicular to AB bzw. BC. (the length of this line is btw the distance from car to center). Then it looks which of those two lines is shorter, and it thus knows if its rather before point B 
+	//or after it. Then it interpolates between, say, A and B and sees where D lies percentually in closeness to B. that percentage with either negativ or positive sign is then the more precise position.
+	//this absolute value ("the car is at anchor 15,45") is then converted into a percentage, by taking the lengths of the first 15 + 0.45 the distance between 15 and 16, divided by the gesamtlength.
+	//the "length of this line" is precondition for two of the shown vektor on the screen!
 	float GetProgress(Vector3[] anchorVector, float[] segmentLengths, Vector3 carPosition) 
 	{
 		// get car closest anchor
@@ -219,6 +242,7 @@ public class PositionTracking : MonoBehaviour {
 		return progress;
 	}
 
+	//finds the vector with the smallest euclidian distance to the car.
 	int GetClosestAnchor(Vector3 position)
 	{
 		float[] distanceVector = new float[anchorVector.Length];
@@ -230,6 +254,7 @@ public class PositionTracking : MonoBehaviour {
 		return closestAnchor;
 	}
 
+	//converts the absolute position in anchors to a percentage of the whole track
 	float ProgressConvert(float progressRelative, float[] segmentLengths)
 	{
 		// get lower bound based on passed anchors
@@ -246,6 +271,7 @@ public class PositionTracking : MonoBehaviour {
 		return progressDistance/trackLength;
 	}
 
+	//finds the value after the comma for the carposition relative to the vector (see above). This is all the LinA-stuff where we find a perpendicular etc.
 	float ProgressFromClosestAnchor(Vector3 P, Vector3[] anchorVector, int closestAnchor) // P = carPosition
 	{
 		// define which anchors are of intrest
@@ -286,13 +312,14 @@ public class PositionTracking : MonoBehaviour {
 		return 0.0f;
 	}
 
-	Vector3 GetLocalPerpendicular(Vector3 A, Vector3 B, Vector3 P)
-	{
-		Vector3 vectorAP = P-A;
-		Vector3 vectorAB = B-A;
-		Vector3 projectionAB = Vector3.Project(vectorAP, vectorAB); // projectionAB is a vector with origin in A, pointing to the perpendicular of P on AB
-		return vectorAP-projectionAB; // perpendicular from P on AB
-	}
+	//this is unneeded?
+//	Vector3 GetLocalPerpendicular(Vector3 A, Vector3 B, Vector3 P)
+//	{
+//		Vector3 vectorAP = P-A;
+//		Vector3 vectorAB = B-A;
+//		Vector3 projectionAB = Vector3.Project(vectorAP, vectorAB); // projectionAB is a vector with origin in A, pointing to the perpendicular of P on AB
+//		return vectorAP-projectionAB; // perpendicular from P on AB
+//	}
 
 	static int ClosestSmallerThan(float[] collection, float target)
 	{

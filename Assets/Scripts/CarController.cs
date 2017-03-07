@@ -270,13 +270,13 @@ public class CarController : MonoBehaviour {
 
 	public Vector2 GetSlip(WheelCollider colliderW) {
 		WheelHit hit;
-		Vector2 slipVector = new Vector2();
-		if (colliderW.GetGroundHit( out hit )) {
-			slipVector[0] = hit.forwardSlip;
+		Vector2 slipVector = new Vector2();     // wenn man fast steht, springt der slipvalue zwischen 0.13 und -0.13 herum
+		if (colliderW.GetGroundHit (out hit)) { // TODO: calculate forward slip by deviding wheel rotation by car velocity in forward direction (von reifenumdrehungen,reifengrosse die reifenoberflachenvelocity errechnen und teilen durch tatsachliches autovelocity (aber nur in direction der reifenausrichtung))
+			slipVector[0] = hit.forwardSlip;    // alternativer workaround ware einfach zu sagen wenn die carvelocity zu klein ist, 
 			slipVector[1] = hit.sidewaysSlip;
 		}
 		else {
-			slipVector[0] = -5.0f;
+			slipVector[0] =		 -5.0f;
 			slipVector[1] = -5.0f;
 		}
 		return slipVector;
