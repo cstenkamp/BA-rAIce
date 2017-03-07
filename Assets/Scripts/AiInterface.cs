@@ -64,6 +64,11 @@ public class AiInterface : MonoBehaviour {
 
 	void FixedUpdate()
 	{
+		//TODO man sollte einen reset-befehl an den pythonserver schicken können (jedes mal beim neustart, und auch beim probweisen wiederherstellen hier!)
+		//TODO hier sollte definitiv noch hin "IF MODE = ANN", was im Menü ausgewählt wurde!
+		//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
+		//     resetten soll und alle keys nochmal genauso drücken sol
+
 		Stopwatch stopwatch = new Stopwatch();
 		stopwatch.Reset();
 		stopwatch.Start();
@@ -75,7 +80,16 @@ public class AiInterface : MonoBehaviour {
 			
 			string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
 			stopwatch.Stop();
-			if (message == "turning") {
+			if (message == "pleasereset") {
+				AITakingControl = false;
+				//TODO: eine funktion die jederzeit gecallt werden kann (bspw bei 10% strecke), die die komplette position back-upt!!
+
+				Vector3 newPos = new Vector3(48, 1, 150); 
+				Car.transform.position = newPos;
+
+				UnityEngine.Debug.Log ("HEEEEREEEEE");
+
+			} else if (message == "turning") {
 				AITakingControl = true;
 				colliderRL.motorTorque = 1200.0f;
 				colliderRR.motorTorque = 1200.0f;
@@ -94,6 +108,8 @@ public class AiInterface : MonoBehaviour {
 		string tosend = "";
 		foreach (float elem in vec)
 			tosend = tosend + " " + elem;
+		tosend = ((int)(Tracking.progress * 100.0f)).ToString () + " " + tosend ;
+
 
 		if (!Car.lapClean)
 			tosend = "invalidround";

@@ -1,7 +1,7 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2008
-
-Project("{3E796F71-633C-3CCC-A8E9-1E3626ABF292}") = "BA-rAIce", "Assembly-CSharp.csproj", "{B942068E-8125-2E2E-C609-55C4768B9B15}"
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BA-rAIce", "Assembly-CSharp.csproj", "{B942068E-8125-2E2E-C609-55C4768B9B15}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
