@@ -42,6 +42,7 @@ public class AiInterface : MonoBehaviour {
 
 	public PositionTracking Tracking;
 	public CarController Car;
+	public MinimapScript Minmap;
 
 	// for debugging
 	public GameObject posMarker1;
@@ -62,7 +63,9 @@ public class AiInterface : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
-
+		//SendToPython (Twodarraytostr (Minmap.GetVisionDisplay ()));
+		UnityEngine.Debug.Log ("  asdfasdfsdf   "+Twodarraytostr (Minmap.GetVisionDisplay ()));
+		//Twodarraytostr (Minmap.GetVisionDisplay ());
 	}
 
 	void FixedUpdate() {
@@ -75,7 +78,7 @@ public class AiInterface : MonoBehaviour {
 		stopwatch.Reset();
 		stopwatch.Start();
 
-		SendToPython(preparesend());
+		//SendToPython(preparesend());
 
 		AskForPython();
 		if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
@@ -118,6 +121,25 @@ public class AiInterface : MonoBehaviour {
 
 		return tosend;
 	}
+
+
+	private string Twodarraytostr(float[,] array) {
+		string alltext = "";
+		string currline = "";
+		int clinenr = 0;
+		for (int i = 0; i < array.GetLength (0); i++) {
+			currline = "";
+			for (int j = 0; j < array.GetLength (1); j++) {
+				currline = currline + (array [i, j]*2).ToString();
+			}
+			//clinenr = (int)decimal.Parse (currline);
+			//alltext = alltext + clinenr.ToString ("X") + " ";
+			alltext = alltext + currline + " ";
+		}
+		return alltext;
+	}
+
+
 
 	//================================================================================
 	// ################################################################
@@ -194,8 +216,6 @@ public class AiInterface : MonoBehaviour {
 //		}
 //		return visArray;
 //	}
-
-
 
 
 

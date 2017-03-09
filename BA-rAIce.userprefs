@@ -2,25 +2,13 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="Unity.Instance.Unity Editor" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\AiInterface.cs">
     <Files>
-      <File FileName="Assets\Scripts\AiInterface.cs" Line="26" Column="51" />
-      <File FileName="Assets\Scripts\CarController.cs" Line="57" Column="30" />
-      <File FileName="Assets\Scripts\Recorder.cs" Line="23" Column="15" />
+      <File FileName="Assets\Scripts\AiInterface.cs" Line="137" Column="34" />
+      <File FileName="Assets\Scripts\CarController.cs" Line="74" Column="35" />
+      <File FileName="Assets\Scripts\Recorder.cs" Line="92" Column="20" />
       <File FileName="Assets\Scripts\TimingScript.cs" Line="1" Column="1" />
       <File FileName="Assets\Scripts\PositionTracking.cs" Line="30" Column="31" />
+      <File FileName="Assets\Scripts\MinimapScript.cs" Line="78" Column="1" />
     </Files>
-    <Pads>
-      <Pad Id="ProjectPad">
-        <State name="__root__">
-          <Node name="BA-rAIce" expanded="True">
-            <Node name="Assembly-CSharp" expanded="True">
-              <Node name="Scripts" expanded="True">
-                <Node name="AiInterface.cs" selected="True" />
-              </Node>
-            </Node>
-          </Node>
-        </State>
-      </Pad>
-    </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
