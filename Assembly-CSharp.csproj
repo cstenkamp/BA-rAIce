@@ -50,6 +50,7 @@
      <Compile Include="Assets\Scripts\CarController.cs" />
      <Compile Include="Assets\Scripts\ConfirmColliderScript.cs" />
      <Compile Include="Assets\Scripts\GameScript.cs" />
+     <Compile Include="Assets\Scripts\MinimapScript.cs" />
      <Compile Include="Assets\Scripts\PositionTracking.cs" />
      <Compile Include="Assets\Scripts\Recorder.cs" />
      <Compile Include="Assets\Scripts\TimingScript.cs" />

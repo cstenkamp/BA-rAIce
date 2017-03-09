@@ -11,12 +11,20 @@ using System.ComponentModel;
 using System.Collections.Generic;
 
 
-public class Consts {
+public static class Consts {
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 2000;
 	public const int lookforpythonintervalms = 2000;
 	public const int MAXAGEPYTHONRESULT = 2000;
+
+	public const int visiondisplay_x = 30; //30
+	public const int visiondisplay_y = 42; //42
+
+
+	public const bool debug_show_visiondisp = false;
+	public const bool debug_showperpendicular = false;
+	public const bool debug_showanchors = false;
 }
 
 
@@ -34,11 +42,6 @@ public class AiInterface : MonoBehaviour {
 
 	public PositionTracking Tracking;
 	public CarController Car;
-
-	// for vis display
-	public int arraySizeX = 10;
-	public int arraySizeY = 30;
-	public float posStepSize = 1.5f;
 
 	// for debugging
 	public GameObject posMarker1;
@@ -165,29 +168,32 @@ public class AiInterface : MonoBehaviour {
 
 
 
-	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
-	public float[,] GetVisionDisplay() {
-		float[,] visArray = new float[arraySizeX,arraySizeY];
-		Vector3 carPos = Car.transform.position;
-		float carRot = Car.transform.eulerAngles.y - 180.0f;
-		for (int i=0; i<arraySizeX; i++)
-		{
-			for (int j=0; j<arraySizeY; j++)
-			{
-				float xPosDot = (i-(float)arraySizeX/2.0f)*posStepSize;
-				float zPosDot = -(j+3)*posStepSize;
-				float X = carPos.x - xPosDot*Mathf.Cos(carRot*Mathf.PI/180.0f) + Mathf.Sin(carRot*Mathf.PI/180.0f)*zPosDot;
-				float Z = carPos.z + xPosDot*Mathf.Sin(carRot*Mathf.PI/180.0f) + Mathf.Cos(carRot*Mathf.PI/180.0f)*zPosDot;
-				visArray[i,j] = Car.CheckSurface(X,Z);
-				// debug
-//								if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
-//								if (i==0 && j==arraySizeY-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
-//								if (i==arraySizeX-1 && j==arraySizeY-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
-//								if (i==arraySizeX-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
-			}
-		}
-		return visArray;
-	}
+	//ALTE FUNKTION FURS VISIONDISPLAY
+
+//  public float posStepSize = 1.5f;
+//	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
+//	public float[,] GetVisionDisplay() {
+//		float[,] visArray = new float[visiondisplay_x,visiondisplay_y];
+//		Vector3 carPos = Car.transform.position;
+//		float carRot = Car.transform.eulerAngles.y - 180.0f;
+//		for (int i=0; i<visiondisplay_x; i++)
+//		{
+//			for (int j=0; j<visiondisplay_y; j++)
+//			{
+//				float xPosDot = (i-(float)visiondisplay_x/2.0f)*posStepSize;
+//				float zPosDot = -(j+3)*posStepSize;
+//				float X = carPos.x - xPosDot*Mathf.Cos(carRot*Mathf.PI/180.0f) + Mathf.Sin(carRot*Mathf.PI/180.0f)*zPosDot;
+//				float Z = carPos.z + xPosDot*Mathf.Sin(carRot*Mathf.PI/180.0f) + Mathf.Cos(carRot*Mathf.PI/180.0f)*zPosDot;
+//				visArray[i,j] = Car.CheckSurface(X,Z);
+//				// debug
+////								if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
+////								if (i==0 && j==visiondisplay_y-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
+////								if (i==visiondisplay_x-1 && j==visiondisplay_y-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
+////								if (i==visiondisplay_x-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
+//			}
+//		}
+//		return visArray;
+//	}
 
 
 

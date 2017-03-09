@@ -4,6 +4,9 @@ using System.Collections;
 using System.Text;
 using System.Linq;
 
+
+
+
 public class UIScript : MonoBehaviour {
 
 	public GameScript Game;
@@ -51,6 +54,7 @@ public class UIScript : MonoBehaviour {
 	public GameObject UiPosYBg;
 	float posY;
 	public AiInterface Ai;
+	public MinimapScript Minmap;
 	public GameObject UiLookAheadBg;
 	public Image LookAheadPoint_1;
 	public Image LookAheadPoint_2;
@@ -85,11 +89,6 @@ public class UIScript : MonoBehaviour {
 	public Image DistanceCell_9;
 	public Image DistanceCell_10;
 
-	// pixel display
-	public Image pixel;
-	public Image pixel_clone;
-	public GameObject pixelParent;
-
 	// objects needed for menu UI
 	public GameObject UiBgMenucover;
 	public GameObject UiBgButtonDrive;
@@ -123,7 +122,8 @@ public class UIScript : MonoBehaviour {
 		GearDisplay.enabled = false;
 		menuSelection = 0;
 		drivingOverlayActive = true;
-		CreatePixelImage(pixel, pixelParent);
+		if (Consts.debug_show_visiondisp) 
+			Minmap.CreatePixelImage(Minmap.pixel, Minmap.pixelParent, Minmap.GetVisionDisplay().GetLength(0), Minmap.GetVisionDisplay().GetLength(1));
 	}
 	
 	// Update is called once per frame
@@ -168,8 +168,10 @@ public class UIScript : MonoBehaviour {
 				SSlipRR.text = RR[1].ToString("F2");
 
 				// GetVisionDisplay
-				float[,] visionDisplay = Ai.GetVisionDisplay();
-				ShowVisionDisplay(visionDisplay);
+				if (Consts.debug_show_visiondisp) {
+					float[,] visionDisplay = Minmap.GetVisionDisplay ();
+					Minmap.ShowVisionDisplay (visionDisplay);
+				}
 			}
 
 			// current laptime display
@@ -341,30 +343,6 @@ public class UIScript : MonoBehaviour {
 		}
 	}
 
-	void CreatePixelImage(Image pixel, GameObject pixelParent)
-	{
-		for (int i = 0; i<Ai.arraySizeX*Ai.arraySizeY; i++)
-		{
-			int x = i%Ai.arraySizeX;
-			int y = i/Ai.arraySizeX;
-			pixel_clone = (Image)Instantiate(pixel, new Vector3(0,0,0), Quaternion.identity, pixelParent.transform);
-			pixel_clone.rectTransform.localScale = new Vector3(1f,1f,1f);
-			pixel_clone.rectTransform.localPosition = new Vector3(-28.5f+x*3.0f,-40.5f+y*3.0f,0);
-			pixel_clone.name = "visPixel_"+x.ToString()+"_"+y.ToString();
-		}
-	}
 
-	void ShowVisionDisplay(float[,] a)
-	{
-		for (int x = 0; x<Ai.arraySizeX; x++)
-		{
-			for (int y = 0; y<Ai.arraySizeY; y++)
-			{
-				float c = a[x,y];
-				Image currentPixel = GameObject.Find("visPixel_"+x.ToString()+"_"+y.ToString()).GetComponent<Image>();
-				currentPixel.color = new Color (c,c,c);
-			}
-		}
-	}
 
 }

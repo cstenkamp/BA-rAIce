@@ -38,13 +38,16 @@ public class PositionTracking : MonoBehaviour {
 		absoluteAnchorAngles = GetAbsoluteAnchorAngles(segmentAngles);
 		anchorProgress = GetAbsoluteAnchorProgress(anchorVector);
 		trackLength = segmentLengths.Sum();
-		// ShowAnchors(anchorVector, anchorPrototype, countText, "absoluteAngles"); // for debugging
+
+		if (Consts.debug_showanchors)
+			ShowAnchors(anchorVector, anchorPrototype, countText, "absoluteAngles"); // for debugging
 	}
 	
 	// Update is called once per frame
 	void Update()
 	{
-		// ShowPerpendicular(); // for debugging
+		if (Consts.debug_showperpendicular)
+			ShowPerpendicular(); // for debugging
 	}
 
 	void FixedUpdate ()
