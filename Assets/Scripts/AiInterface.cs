@@ -5,18 +5,21 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Thread;
 using System.Text;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Collections.Generic;
+using System.Linq;
 
 
 public static class Consts {
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 2000;
-	public const int lookforpythonintervalms = 2000;
-	public const int MAXAGEPYTHONRESULT = 2000;
+	public const int updatepythonintervalms = 200;
+	public const int lookforpythonintervalms = 200;
+	public const int MAXAGEPYTHONRESULT = 200;
+	public const int CREATE_VECS_ALL = 100;       //TODO: these need to scale up with the game speed!
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 42; //42
@@ -53,19 +56,24 @@ public class AiInterface : MonoBehaviour {
 	//for sending to python
 	public long lastpythonupdate =  Environment.TickCount;
 	public long lastpythoncheck =  Environment.TickCount;
+	public long lastgetvectortime = Environment.TickCount;
+	public string lastpythonsent;
 
 	//=============================================================================
 
 	// Use this for initialization
 	void Start () {
-		SendToPython ("resetannvals");
+		SendToPython ("resetannvals", true);
 	}
 
 	// Update is called once per frame
 	void Update () {
 		//SendToPython (Twodarraytostr (Minmap.GetVisionDisplay ()));
-		UnityEngine.Debug.Log ("  asdfasdfsdf   "+Twodarraytostr (Minmap.GetVisionDisplay ()));
+		//UnityEngine.Debug.Log (Twodarraytostr (Minmap.GetVisionDisplay ()));
 		//Twodarraytostr (Minmap.GetVisionDisplay ());
+
+		load_infos (false, false);
+
 	}
 
 	void FixedUpdate() {
@@ -78,7 +86,10 @@ public class AiInterface : MonoBehaviour {
 		stopwatch.Reset();
 		stopwatch.Start();
 
-		//SendToPython(preparesend());
+
+
+		SendToPython (load_infos (false, true), false);
+
 
 		AskForPython();
 		if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
@@ -92,13 +103,13 @@ public class AiInterface : MonoBehaviour {
 				//Vector3 newPos = new Vector3(48, 1, 150); 
 				//Car.transform.position = newPos;
 
-				UnityEngine.Debug.Log ("HEEEEREEEEE");
+				//UnityEngine.Debug.Log ("HEEEEREEEEE");
 
-			} else if (message == "turning") {
-				AITakingControl = true;
+			//} else if (message == "turning") {
+				//AITakingControl = true;
 				//colliderRL.motorTorque = 1200.0f;
 				//colliderRR.motorTorque = 1200.0f;
-				UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+				//UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
 			} else {
 				AITakingControl = false;
 				//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
@@ -107,38 +118,34 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	private string preparesend() {
-		
-		float[] vec = GetAllInfos();
-		string tosend = "";
-		foreach (float elem in vec)
-			tosend = tosend + " " + elem;
-		tosend = ((int)(Tracking.progress * 100.0f)).ToString () + " " + tosend ;
+	private string load_infos(Boolean force_reload, Boolean forbid_reload) {
+		int currtime = Environment.TickCount;
+		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
+			lastpythonsent = GetAllInfos ();
+			lastgetvectortime = currtime;
+		}
 
-
-		if (!Car.lapClean)
-			tosend = "invalidround";
-
-		return tosend;
+//		if (!Car.lapClean)
+//			tosend = "invalidround";
+//
+		return lastpythonsent;
 	}
 
 
-	private string Twodarraytostr(float[,] array) {
+	private string TwoDArrayToStr(float[,] array) {
 		string alltext = "";
 		string currline = "";
-		int clinenr = 0;
 		for (int i = 0; i < array.GetLength (0); i++) {
 			currline = "";
 			for (int j = 0; j < array.GetLength (1); j++) {
 				currline = currline + (array [i, j]*2).ToString();
 			}
-			//clinenr = (int)decimal.Parse (currline);
-			//alltext = alltext + clinenr.ToString ("X") + " ";
-			alltext = alltext + currline + " ";
+			//clinenr = ParseIntBase3 (currline);
+			//alltext = alltext + clinenr.ToString("X") + ",";
+			alltext = alltext + currline.ToString() + ",";
 		}
 		return alltext;
 	}
-
 
 
 	//================================================================================
@@ -147,22 +154,28 @@ public class AiInterface : MonoBehaviour {
 	// ################################################################
 
 
-	public float[] GetAllInfos() {
-		List<float> all = new List<float> ();
-		all.Add ((float)((int)(Tracking.progress * 100.0f)));
-		all.Add(float.PositiveInfinity);
-		all.AddRange (GetSpeedStear ());
-		all.Add(float.PositiveInfinity);
-		all.AddRange (GetCarStatusVector());
-		all.Add(float.PositiveInfinity);
+	public string GetAllInfos() {
+		//Keys: P: Progress
+		//      S: SpeedStearVec (rounded to 4)
+		//		T: CarStatusVec  (rounded to 4)
+		//		V: VisionVector  (converted to hexadecimal)
 
-		//GetVisionDisplay(); und ....  //WIE krieg ich 2dimensionale vektoren da am sinnvollsten zusammen mit 1dimensionalen unter?
+		string all = ""; 
+
+		all += "P("+((int)(Tracking.progress * 100.0f)).ToString ()+")";
+
+		all += "S(" + string.Join (",", GetSpeedStear ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+
+		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+
+		all += "V(" + TwoDArrayToStr (Minmap.GetVisionDisplay ()) + ")";
+
 		//GetCenterDistVector
 		//GetProgressVector, wobei wir da ja schon die Frage hatten wie ich den brauche.
 		//GetLookAheadVector
 		//und vom carstatusvektor fehlen noch ganz viele
 
-		return all.ToArray();
+		return all;
 	}
 
 
@@ -170,7 +183,7 @@ public class AiInterface : MonoBehaviour {
 
 
 
-		SendToPython ("reset");
+		SendToPython ("reset", true);
 	}
 
 
@@ -375,9 +388,9 @@ public class AiInterface : MonoBehaviour {
 
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls AsynchronousClient's StartSenderClient
-	public void SendToPython(string data) {
+	public void SendToPython(string data, Boolean force) {
 		int currtime = Environment.TickCount;
-		if (currtime - lastpythonupdate > Consts.updatepythonintervalms) {
+		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
 			AsynchronousClient.StartSenderClientWorkerAsync(data);
 			lastpythonupdate = currtime;
 		}
@@ -391,6 +404,25 @@ public class AiInterface : MonoBehaviour {
 			lastpythoncheck = currtime;
 		}		
 	}
+
+
+
+
+//============================== HELPER FUNCTIONS ==================================================
+
+
+	private static int ParseIntBase3(string s)
+	{
+		int res = 0;
+		for (int i = 0; i < s.Length; i++)
+		{
+			res = 3 * res + s[i] - '0';
+		}
+		return res;
+	}
+
+
+
 }
 
 
@@ -429,6 +461,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			connectDone.WaitOne();  
 			Send(client,preparestring(data));  
 			sendDone.WaitOne();  
+
 			client.Shutdown(SocketShutdown.Send);  
 			client.Close();  
 		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
@@ -478,7 +511,9 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 	public static void StartGetterClientWorkerAsync() {
 		StartGetterClientWorkerDelegate worker = new StartGetterClientWorkerDelegate (StartGetterClientWorker);
+
 		//AsyncCallback completedCallback = new AsyncCallback (null);
+
 		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
 		worker.BeginInvoke (null, async);
 	}
@@ -510,6 +545,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 	private static void ReceiveCallback( IAsyncResult ar ) {  
 		try {  
+			//This callback will also be called if the client is already disposed - which is why we catch that.
 			StateObject state = (StateObject) ar.AsyncState;  // Retrieve the state object and the client socket 
 			Socket client = state.workSocket;  
 			int bytesRead = client.EndReceive(ar); // Read data from the remote device. 

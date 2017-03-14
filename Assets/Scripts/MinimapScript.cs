@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 using UnityEngine.UI;
 
@@ -30,33 +31,38 @@ public class MinimapScript : MonoBehaviour {
 		myRT.Create();
 		cam.targetTexture = myRT;
 		RenderTexture.active = myRT;
-		cam.Render ();
-		Texture2D myImg = new Texture2D (Consts.visiondisplay_x, Consts.visiondisplay_y, TextureFormat.RGB24, false); //false = no mipmaps
-		myImg.ReadPixels (new Rect (0, 0, Consts.visiondisplay_x, Consts.visiondisplay_y), 0, 0); //"the center section"
-		myImg.Apply(false);
+		try {
+			cam.Render (); 
+			Texture2D myImg = new Texture2D (Consts.visiondisplay_x, Consts.visiondisplay_y, TextureFormat.RGB24, false); //false = no mipmaps
+			myImg.ReadPixels (new Rect (0, 0, Consts.visiondisplay_x, Consts.visiondisplay_y), 0, 0); //"the center section"
+			myImg.Apply(false);
 
-		//debug
-//		byte[] bytes;
-//		bytes = myImg.EncodeToPNG();
-//		System.IO.File.WriteAllBytes("./picpicpic.png", bytes );
+			//debug
+			//		byte[] bytes;
+			//		bytes = myImg.EncodeToPNG();
+			//		System.IO.File.WriteAllBytes("./picpicpic.png", bytes );
 
 
-		cam.targetTexture = null;
-		cam.rect = new Rect(0.77f, 0.63f, 0.1f, 0.25f);
+			cam.targetTexture = null;
+			cam.rect = new Rect(0.77f, 0.63f, 0.1f, 0.25f);
 
-		float[,] visiondisplay = new float[myImg.width, myImg.height];
+			float[,] visiondisplay = new float[myImg.width, myImg.height];
 
-		for (int i = 0; i < myImg.width; i++) {
-			for (int j = 0; j < myImg.height; j++) {
-				if ((float)myImg.GetPixel (i, j).grayscale > 0.8)
-					visiondisplay [i, j] = 1;
-				else if ((float)myImg.GetPixel (i, j).grayscale > 0.4)
-					visiondisplay [i, j] = 0.5f;
-				else
-					visiondisplay [i, j] = 0;
+			for (int i = 0; i < myImg.width; i++) {
+				for (int j = 0; j < myImg.height; j++) {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8)
+						visiondisplay [i, j] = 1;
+					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4)
+						visiondisplay [i, j] = 0.5f;
+					else
+						visiondisplay [i, j] = 0;
+				}
 			}
+			return visiondisplay;
+		} catch (Exception e) {
+			UnityEngine.Debug.Log ("Flare renderer to update not found - in UnityEngine.Camera:Render()");
+			return new float[1, 1];
 		}
-		return visiondisplay;
 	}
 
 
