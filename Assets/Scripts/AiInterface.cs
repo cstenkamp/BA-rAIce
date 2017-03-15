@@ -5,7 +5,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Thread;
 using System.Text;
 using System.Diagnostics;
 using System.ComponentModel;
@@ -16,10 +15,10 @@ using System.Linq;
 public static class Consts {
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 200;
-	public const int lookforpythonintervalms = 200;
-	public const int MAXAGEPYTHONRESULT = 200;
-	public const int CREATE_VECS_ALL = 100;       //TODO: these need to scale up with the game speed!
+	public const int updatepythonintervalms = 100;
+	public const int lookforpythonintervalms = 100;
+	public const int MAXAGEPYTHONRESULT = 150;
+	public const int CREATE_VECS_ALL = 50;       //TODO: these need to scale up with the game speed!
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 42; //42
@@ -58,6 +57,8 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythoncheck =  Environment.TickCount;
 	public long lastgetvectortime = Environment.TickCount;
 	public string lastpythonsent;
+	public 
+
 
 	//=============================================================================
 
@@ -155,10 +156,13 @@ public class AiInterface : MonoBehaviour {
 
 
 	public string GetAllInfos() {
-		//Keys: P: Progress
+		//Keys: P: Progress as a real number in percent
 		//      S: SpeedStearVec (rounded to 4)
 		//		T: CarStatusVec  (rounded to 4)
-		//		V: VisionVector  (converted to hexadecimal)
+		//		C: CenterDistVec (rounded to 4)
+		//		L: LookAheadVec  (rounded to 4)
+		//		V: VisionVector  (converted to decimal)
+		//		R: Progress as a vector (rounded to 4)
 
 		string all = ""; 
 
@@ -168,13 +172,18 @@ public class AiInterface : MonoBehaviour {
 
 		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
+		all += "C"+ string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+
+		all += "L"+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+
 		all += "V(" + TwoDArrayToStr (Minmap.GetVisionDisplay ()) + ")";
 
-		//GetCenterDistVector
-		//GetProgressVector, wobei wir da ja schon die Frage hatten wie ich den brauche.
-		//GetLookAheadVector
-		//und vom carstatusvektor fehlen noch ganz viele
+		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
+		//TODO: add the red/green bar, sonst machts ja keinen Sinn!
+		//TODO: gucken welche vektoren ich brauche
+		//TODO: klären ob ich den Progress als number oder als vector brauche
+		//TODO: vom carstatusvektor fehlen noch ganz viele
 		return all;
 	}
 
@@ -385,13 +394,39 @@ public class AiInterface : MonoBehaviour {
 
 //================================================================================
 
+	public static void CallToChildThread()
+	{
+		try
+		{
+			UnityEngine.Debug.Log("Child thread starts");
+			for (int counter = 0; counter <= 10; counter++)
+			{
+				Thread.Sleep(500);
+				UnityEngine.Debug.Log(counter);
+			}
+
+			UnityEngine.Debug.Log("Child Thread Completed");
+		}
+		finally
+		{
+			UnityEngine.Debug.Log("Child thread killed!");
+		}
+	}
+
+
 
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls AsynchronousClient's StartSenderClient
 	public void SendToPython(string data, Boolean force) {
 		int currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
-			AsynchronousClient.StartSenderClientWorkerAsync(data);
+			var t = new Thread(() => AsynchronousClient.StartSenderClient(data));
+			t.Start();
+			ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
+			foreach (ProcessThread thread in currentThreads)    
+			{
+				//if t.donewithwork: t.Abort();
+			}
 			lastpythonupdate = currtime;
 		}
 	}
@@ -399,7 +434,13 @@ public class AiInterface : MonoBehaviour {
 	public void AskForPython() { //asynchron, daher keinen string message returnen!
 		int currtime = Environment.TickCount;
 		if (currtime - lastpythoncheck > Consts.lookforpythonintervalms) {
-			AsynchronousClient.StartGetterClientWorkerAsync ();
+			var t = new Thread(() => AsynchronousClient.StartGetterClient());
+			t.Start();
+			ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
+			foreach (ProcessThread thread in currentThreads)    
+			{
+				//if t.donewithwork: t.Abort();
+			}			
 			//UnityEngine.Debug.Log ("Asking Python for new Results");
 			lastpythoncheck = currtime;
 		}		
@@ -449,7 +490,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 	private static ManualResetEvent receiveDone = new ManualResetEvent(false);  
 
 	//we have a sender-client, who every x seconds updates python's status
-	public static void StartSenderClientWorker(string data) {  
+	public static void StartSenderClient(string data) {  
 		try {  
 			connectDone = new ManualResetEvent(false);   
 			sendDone = new ManualResetEvent(false);  
@@ -467,14 +508,34 @@ public class AsynchronousClient {  //updating python's value should happen async
 		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
 	}  
 
-	public delegate void StartSenderClientWorkerDelegate(string data);
 
-	public static void StartSenderClientWorkerAsync(string data) {
-		StartSenderClientWorkerDelegate worker = new StartSenderClientWorkerDelegate (StartSenderClientWorker);
-		//AsyncCallback completedCallback = new AsyncCallback (null);
-		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
-		worker.BeginInvoke (data, null, async);
-	}
+//	//we have a sender-client, who every x seconds updates python's status
+//	public static void StartSenderClientWorker(string data) {  
+//		try {  
+//			connectDone = new ManualResetEvent(false);   
+//			sendDone = new ManualResetEvent(false);  
+//			IPHostEntry ipHost = Dns.GetHostEntry("");
+//			IPAddress ipAddress = ipHost.AddressList[0];  
+//			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTSEND);  
+//			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
+//			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
+//			connectDone.WaitOne();  
+//			Send(client,preparestring(data));  
+//			sendDone.WaitOne();  
+//
+//			client.Shutdown(SocketShutdown.Send);  
+//			client.Close();  
+//		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
+//	}  
+//
+//	public delegate void StartSenderClientWorkerDelegate(string data);
+//
+//	public static void StartSenderClientWorkerAsync(string data) {
+//		StartSenderClientWorkerDelegate worker = new StartSenderClientWorkerDelegate (StartSenderClientWorker);
+//		//AsyncCallback completedCallback = new AsyncCallback (null);
+//		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
+//		worker.BeginInvoke (data, null, async);
+//	}
 
 
 	//================================================================================
@@ -486,7 +547,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 	}
 
 	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll? Ja
-	public static void StartGetterClientWorker() {  
+	public static void StartGetterClient() {  
 		try {  
 			connectDone = new ManualResetEvent(false);   
 			sendDone = new ManualResetEvent(false); 
@@ -505,18 +566,39 @@ public class AsynchronousClient {  //updating python's value should happen async
 			client.Close();  
 		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
 	}  
-
-
-	public delegate void StartGetterClientWorkerDelegate();
-
-	public static void StartGetterClientWorkerAsync() {
-		StartGetterClientWorkerDelegate worker = new StartGetterClientWorkerDelegate (StartGetterClientWorker);
-
-		//AsyncCallback completedCallback = new AsyncCallback (null);
-
-		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
-		worker.BeginInvoke (null, async);
-	}
+		
+//	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll? Ja
+//	public static void StartGetterClientWorker() {  
+//		try {  
+//			connectDone = new ManualResetEvent(false);   
+//			sendDone = new ManualResetEvent(false); 
+//			receiveDone = new ManualResetEvent(false); 
+//			IPHostEntry ipHost = Dns.GetHostEntry("");
+//			IPAddress ipAddress = ipHost.AddressList[0];  
+//			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTASK);  
+//			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
+//			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
+//			connectDone.WaitOne();  
+//
+//			Receive(client);  //das ganze ist ja asynchron, das heißt Receive kann nix returnen sondern nur den value updaten.. was aber ja sogar gewünscht ist!
+//			receiveDone.WaitOne();  
+//
+//			client.Shutdown(SocketShutdown.Send);  
+//			client.Close();  
+//		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
+//	}  
+//
+//
+//	public delegate void StartGetterClientWorkerDelegate();
+//
+//	public static void StartGetterClientWorkerAsync() {
+//		StartGetterClientWorkerDelegate worker = new StartGetterClientWorkerDelegate (StartGetterClientWorker);
+//
+//		//AsyncCallback completedCallback = new AsyncCallback (null);
+//
+//		System.ComponentModel.AsyncOperation async = System.ComponentModel.AsyncOperationManager.CreateOperation (null);
+//		worker.BeginInvoke (null, async);
+//	}
 
 
 	private static void ConnectCallback(IAsyncResult ar) {  
