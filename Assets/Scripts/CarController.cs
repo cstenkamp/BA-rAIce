@@ -2,6 +2,8 @@
 using System.Collections;
 using System;
 
+//hierein die funktion zum reset bei Wandkontakt. Kann dafür im start() nen trigger an alle wände setzen, und OnTriggerEnter (Collider other) das auto (falls flag true) resetten
+
 
 public class CarController : MonoBehaviour {
 

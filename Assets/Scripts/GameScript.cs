@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+//wenn man das spiel komplett neu starten können wollte, muss man dafür ResetSessionTiming vom Timinscript callen
+
 public class GameScript : MonoBehaviour {
 
 	public string mode = "menu";
@@ -34,7 +36,9 @@ public class GameScript : MonoBehaviour {
 	// handle changes to the game mode
 	public void SwitchMode (string newMode)
 	{
-		if (newMode == "menu")
+		//TODO! wenn man escape drückt soll der ein ANDERES menü öffnen "gehe zu letztem checkpoint, resette auto, zurück" (da drin wäre dann auch nicht timing.reset sondern timing.stop)
+
+		if (newMode == "menu") //geht er hin wenn man escape drückt
 		{
 			mode = newMode;
 			CarCamera.SetActive(false);
@@ -55,4 +59,5 @@ public class GameScript : MonoBehaviour {
 			Rec.ResetLap();
 		}
 	}
+
 }

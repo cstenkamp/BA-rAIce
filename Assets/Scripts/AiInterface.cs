@@ -188,7 +188,15 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	public void ResetCar() {
+	public void ResetCarToMiddle() {
+
+
+
+		SendToPython ("reset", true);
+	}
+
+
+	public void ResetCarWithSpeed() {
 
 
 
@@ -421,6 +429,7 @@ public class AiInterface : MonoBehaviour {
 		int currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
 			var t = new Thread(() => AsynchronousClient.StartSenderClient(data));
+			//TODO: BUG: wenn der server nicht on ist, schmiert Unity sooner or later mit "too many threads" ab!!
 			t.Start();
 			ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
 			foreach (ProcessThread thread in currentThreads)    
