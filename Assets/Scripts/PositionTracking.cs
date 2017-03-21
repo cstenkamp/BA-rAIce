@@ -347,6 +347,7 @@ public class PositionTracking : MonoBehaviour {
 	// ######################### TRIGGER HANDLING ##########################
 	// #####################################################################
 
+	//wie werden diese trigger erzeugt? Kann ich so nen trigger die ganze wand entlang machen?
 	void TriggerRec(float progress, float inc)
 	{
 		if (progress > triggerCount*inc/100.0f)

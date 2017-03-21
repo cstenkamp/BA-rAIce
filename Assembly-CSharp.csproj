@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\Scripts\AiInterface.cs" />
+     <Compile Include="Assets\Scripts\AsyncClient.cs" />
      <Compile Include="Assets\Scripts\CarController.cs" />
      <Compile Include="Assets\Scripts\ConfirmColliderScript.cs" />
      <Compile Include="Assets\Scripts\GameScript.cs" />

@@ -7,19 +7,40 @@ using System.IO;
 
 public class Recorder : MonoBehaviour {
 
-	// external scripts
+	// external scripts & stuff
 	public TimingScript Timing;
 	public PositionTracking Tracking;
-	// public variables
+	public CarController Car;
+
+	// für's timen der besten runde
 	public List<PointInTime> thisLap; //eigene klasse, siehe unten
 	public List<PointInTime> lastLap;
 	public List<PointInTime> fastestLap;
 	private int nStepsFeedback = 8;
 
+	// für's komplette tracken fürs supervised-learning
+	public List<TrackingPoint> SVLearnLap;
+	private const int trackAllXMS = 100;
+	private int lasttrack = Environment.TickCount;
+
+
+
+	void FixedUpdate() {
+		int currtime = Environment.TickCount;
+		if (currtime - lasttrack > trackAllXMS) {
+
+			SVLearnUpdateList ();
+			lasttrack = currtime;
+		}
+	}
+
+
+
+
+
 	// ##################################
 	// ##### START, UPDATE & FINISH #####
 	// ##################################
-
 
 	// zwischen StartList und FinishList müssen für supervised learning sämtliche inputs (und ein reinformentlearning-target) getrackt werden.
 
@@ -33,15 +54,26 @@ public class Recorder : MonoBehaviour {
 		thisLap = new List<PointInTime>();
 		thisLap.Add(new PointInTime(0.0f, 0.0f));
 
-		//fürs Alles-tracken fürs supervisedlearning muss er hier noch Listen für die commands hinzügen (function aus carcontroller von hier callen)
+		if (Consts.record_all_inputs) {
+			SVLearnLap = new List<TrackingPoint> ();
+			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f)); //TODO: sollte er nicht auch beim SV-Learning den Visionvector etc durchgehend mit-recorden???
+		}
 	}
 
-	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird
 
-	public void UpdateList()
+	public void UpdateList() //wird in der positiontracking.triggerrec gecallt (aka jedes mal wenn er nen trigger durchfährt)
 	{
 		thisLap.Add(new PointInTime(Timing.currentLapTime, Tracking.progress));
 	}
+
+
+	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
+	public void SVLearnUpdateList(){
+		if (Consts.record_all_inputs) {
+			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress));
+		}
+	}
+
 
 	public void FinishList()
 	{
@@ -52,11 +84,17 @@ public class Recorder : MonoBehaviour {
 			fastestLap = lastLap;
 			SaveLap(fastestLap, "fastlap");
 		}
+
+		//TODO woher weiß ich eigentlich, dass er nr valid runden zählt??
+		SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f));
+		SaveSVLearnLap (SVLearnLap, "complete_" + DateTime.Now.ToString ("MM_dd_yy_h_mm_ss")); 
+
 	}
 
 	// ##################################
 	// ###### ADDITIONAL FUNCTIONS ######
 	// ##################################
+	//TODO: diese werden gebraucht um anhand derer supervisedly zu lernen! ...und möglicherweise noch mehr?
 
 	public float GetDelta() //für das Sekunden-Delta im UI
 	{
@@ -67,6 +105,8 @@ public class Recorder : MonoBehaviour {
 		}
 		return 0.0f; //fürs Learnen sollte das doch eher positive infinity sein, oder? Erste basis-runde ist überall top
 	}
+
+
 
 	public float GetFeedback() //für die Feedbackbar vom UI
 	{
@@ -83,7 +123,10 @@ public class Recorder : MonoBehaviour {
 		return 0.0f;
 	}
 
+
+
 	//TODO ResetLap in der noch-kommenden Neustart-funktion nutzen!
+	//TODO ne resetlap für das svlearnlapdingsi!
 	public void ResetLap()
 	{
 		thisLap = new List<PointInTime>();
@@ -111,12 +154,29 @@ public class Recorder : MonoBehaviour {
 	// #### SAVE & LOAD COMPLETE LAP ####
 	// ##################################
 
+	public void SaveSVLearnLap(List<TrackingPoint> SVLearnLap, string fileName) 
+	{
+		if (!Directory.Exists("SavedLaps/")) {
+			Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
+		} else {
+			BinaryFormatter bf = new BinaryFormatter();
+			FileStream file = File.Create("SavedLaps/" + fileName + ".svlap");
+			bf.Serialize(file, SVLearnLap);
+			file.Close();
+		}	
+	}
+
+
 	public void SaveLap(List<PointInTime> lap, string fileName)
 	{
-		BinaryFormatter bf = new BinaryFormatter();
-		FileStream file = File.Create("SavedLaps/" + fileName + ".lap");
-		bf.Serialize(file, lap);
-		file.Close();
+		if (!Directory.Exists("SavedLaps/")) {
+			Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
+		} else {
+			BinaryFormatter bf = new BinaryFormatter();
+			FileStream file = File.Create("SavedLaps/" + fileName + ".lap");
+			bf.Serialize(file, lap);
+			file.Close();
+		}
 	}
 
 	public bool LoadLap(string fileName) //wird in "start" von Gamescript gecallt, ganz zu Anfang des Spiels
@@ -147,6 +207,27 @@ public class PointInTime
 	public PointInTime(){}
 	public PointInTime(float newTime, float newProgress) { time = newTime; progress = newProgress; }
 }
-
+	
 // fürs alles-tracken ne ähnliche klasse machen, die zu jedem frame (oder x mal die sekunde), nicht nur jedem xten positiontracker, alles inkl. inputs trackt und speichert als NN-inputs 
 // (als file, das der fürs supervised-learning auspackt)
+
+[Serializable]
+public class TrackingPoint
+{
+	// class variables
+	public float time;
+	public float throttlePedalValue;
+	public float brakePedalValue;
+	public float steeringValue;
+	public float progress;
+
+	// constructors
+	public TrackingPoint(){}
+	public TrackingPoint(float newtime, float newthrottlePedalValue, float newbrakePedalValue, float newsteeringValue, float newprogress) { 
+		time = newtime;
+		throttlePedalValue = newthrottlePedalValue; 
+		brakePedalValue = newbrakePedalValue; 
+		steeringValue = newsteeringValue; 
+		progress = newprogress;
+	}
+}

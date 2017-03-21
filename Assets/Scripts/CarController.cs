@@ -2,6 +2,7 @@
 using System.Collections;
 using System;
 
+
 //hierein die funktion zum reset bei Wandkontakt. Kann dafür im start() nen trigger an alle wände setzen, und OnTriggerEnter (Collider other) das auto (falls flag true) resetten
 
 
@@ -55,7 +56,8 @@ public class CarController : MonoBehaviour {
 		Car.transform.position = startPosition;
 		Car.centerOfMass = new Vector3(0.0f,0.0f,0.0f);
 	}
-	
+
+
 	// Update is called once per frame
 	void FixedUpdate ()
 	{
@@ -100,6 +102,8 @@ public class CarController : MonoBehaviour {
 				brakePedalValue = -System.Convert.ToSingle(Input.GetAxis("Vertical"));
 				if (brakePedalValue < 0) { brakePedalValue = 0.0f; }
 			}
+
+
 
             // accelerate
             if (AiInt.AITakingControl == false) { 
@@ -178,7 +182,7 @@ public class CarController : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
 	}
 
-	public void ResetCar()
+	public void ResetCar() //TODO: das hier nicht nur für den start, sondern für alle möglichen reset-punkte
 	{
 		// reset the car & kill innertia
 		Car.transform.position = startPosition;
@@ -196,6 +200,8 @@ public class CarController : MonoBehaviour {
 		colliderFL.steerAngle = 0.0f;
 		colliderFR.steerAngle = 0.0f;
 	}
+
+
 
 	void AdjustFriction(WheelCollider wheel, string whichWheel)
 	{

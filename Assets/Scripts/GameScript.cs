@@ -37,6 +37,7 @@ public class GameScript : MonoBehaviour {
 	public void SwitchMode (string newMode)
 	{
 		//TODO! wenn man escape drückt soll der ein ANDERES menü öffnen "gehe zu letztem checkpoint, resette auto, zurück" (da drin wäre dann auch nicht timing.reset sondern timing.stop)
+		//TODO: dann beim resetten auf die resets in carcontroller, recorder, timingscript, ... achten!
 
 		if (newMode == "menu") //geht er hin wenn man escape drückt
 		{
