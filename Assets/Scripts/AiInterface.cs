@@ -1,17 +1,11 @@
-﻿//TODO AIInterface macht überhaupt nur was wenn man in nem anderem modus ist (nicht im normalen driving-modus)
-//dann gibt es den normalen drive-modus, den train AI supervisedly in dem er die alles recorded, den let-AI-drive in dem er den python-server braucht...
+﻿//TODO gucken ob ich nicht andere game-modi brauche habe als die momentanen?
 
 using UnityEngine;
 using System.Collections;
 
 using System;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading;
-using System.Text;
 using System.Diagnostics;
-using System.ComponentModel;
-using System.Collections.Generic;
 using System.Linq;
 
 
@@ -39,6 +33,12 @@ public static class Consts {
 
 public class AiInterface : MonoBehaviour {
 
+	//these are only active in the "train AI" mode
+	public bool sent_to_python = true;
+	public bool get_from_python = true;
+
+
+
 	public WheelCollider colliderRL;
 	public WheelCollider colliderRR;
 	public WheelCollider colliderFL;
@@ -49,6 +49,7 @@ public class AiInterface : MonoBehaviour {
 	public PositionTracking Tracking;
 	public CarController Car;
 	public MinimapScript Minmap;
+	public GameScript Game;
 
 	// for debugging
 	public GameObject posMarker1;
@@ -61,7 +62,6 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythoncheck =  Environment.TickCount;
 	public long lastgetvectortime = Environment.TickCount;
 	public string lastpythonsent;
-	public 
 
 
 	//=============================================================================
@@ -73,57 +73,60 @@ public class AiInterface : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
-		//SendToPython (Twodarraytostr (Minmap.GetVisionDisplay ()));
-		//UnityEngine.Debug.Log (Twodarraytostr (Minmap.GetVisionDisplay ()));
-		//Twodarraytostr (Minmap.GetVisionDisplay ());
+		if (Game.mode.Contains ("train_AI")) {
+			//SendToPython (Twodarraytostr (Minmap.GetVisionDisplay ()));
+			//UnityEngine.Debug.Log (Twodarraytostr (Minmap.GetVisionDisplay ()));
+			//Twodarraytostr (Minmap.GetVisionDisplay ());
 
-		load_infos (false, false);
-
+			load_infos (false, false);
+		}
 	}
 
 	void FixedUpdate() {
-		//TODO man sollte einen reset-befehl an den pythonserver schicken können (jedes mal beim neustart, und auch beim probweisen wiederherstellen hier!)
-		//TODO hier sollte definitiv noch hin "IF MODE = ANN", was im Menü ausgewählt wurde!
-		//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
-		//     resetten soll und alle keys nochmal genauso drücken sol
+		if (Game.mode.Contains("train_AI")) {
+				
+			//TODO man sollte einen reset-befehl an den pythonserver schicken können (jedes mal beim neustart, und auch beim probweisen wiederherstellen hier!)
+			//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
+			//     resetten soll und alle keys nochmal genauso drücken sol
 
-		Stopwatch stopwatch = new Stopwatch();
-		stopwatch.Reset();
-		stopwatch.Start();
-
-
-
-		SendToPython (load_infos (false, true), false);
+			Stopwatch stopwatch = new Stopwatch();
+			stopwatch.Reset();
+			stopwatch.Start();
 
 
-		AskForPython();
-		if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
-			
-			string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
-			stopwatch.Stop();
-			if (message == "pleasereset") {
-				AITakingControl = false;
-				//TODO: eine funktion die jederzeit gecallt werden kann (bspw bei 10% strecke), die die komplette position back-upt!!
 
-				//Vector3 newPos = new Vector3(48, 1, 150); 
-				//Car.transform.position = newPos;
+			SendToPython (load_infos (false, true), false);
 
-				//UnityEngine.Debug.Log ("HEEEEREEEEE");
 
-			//} else if (message == "turning") {
-				//AITakingControl = true;
-				//colliderRL.motorTorque = 1200.0f;
-				//colliderRR.motorTorque = 1200.0f;
-				//UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
-			} else {
-				AITakingControl = false;
-				//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+			AskForPython();
+			if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
+				
+				string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
+				stopwatch.Stop();
+				if (message == "pleasereset") {
+					AITakingControl = false;
+					//TODO: eine funktion die jederzeit gecallt werden kann (bspw bei 10% strecke), die die komplette position back-upt!!
+
+					//Vector3 newPos = new Vector3(48, 1, 150); 
+					//Car.transform.position = newPos;
+
+					//UnityEngine.Debug.Log ("HEEEEREEEEE");
+
+				//} else if (message == "turning") {
+					//AITakingControl = true;
+					//colliderRL.motorTorque = 1200.0f;
+					//colliderRR.motorTorque = 1200.0f;
+					//UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+				} else {
+					AITakingControl = false;
+					//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
+				}
 			}
 		}
 	}
 
 
-	private string load_infos(Boolean force_reload, Boolean forbid_reload) {
+	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
 		int currtime = Environment.TickCount;
 		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 			lastpythonsent = GetAllInfos ();
@@ -184,7 +187,6 @@ public class AiInterface : MonoBehaviour {
 
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		//TODO: add the red/green bar, sonst machts ja keinen Sinn!
 		//TODO: gucken welche vektoren ich brauche
 		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
@@ -227,7 +229,6 @@ public class AiInterface : MonoBehaviour {
 
 
 	//ALTE FUNKTION FURS VISIONDISPLAY
-
 //  public float posStepSize = 1.5f;
 //	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
 //	public float[,] GetVisionDisplay() {
@@ -412,33 +413,32 @@ public class AiInterface : MonoBehaviour {
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls AsynchronousClient's StartSenderClient
 	public void SendToPython(string data, Boolean force) {
+		if (!sent_to_python) {	return;	}
 		int currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
 			var t = new Thread(() => AsynchronousClient.StartSenderClient(data));
-			//TODO: BUG: wenn der server nicht on ist, schmiert Unity sooner or later mit "too many threads" ab!!
 			t.Start();
-			ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
-			foreach (ProcessThread thread in currentThreads)    
-			{
-				//if t.donewithwork: t.Abort();
-			}
 			lastpythonupdate = currtime;
 		}
 	}
 
 	public void AskForPython() { //asynchron, daher keinen string message returnen!
+		if (!get_from_python) {	return;	}
 		int currtime = Environment.TickCount;
 		if (currtime - lastpythoncheck > Consts.lookforpythonintervalms) {
 			var t = new Thread(() => AsynchronousClient.StartGetterClient());
 			t.Start();
-			ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
-			foreach (ProcessThread thread in currentThreads)    
-			{
-				//if t.donewithwork: t.Abort();
-			}			
-			//UnityEngine.Debug.Log ("Asking Python for new Results");
 			lastpythoncheck = currtime;
 		}		
+	}
+
+
+	public static void KillOtherThreads() {
+		ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
+		foreach (Thread thread in currentThreads)    
+		{
+			thread.Abort();
+		}	
 	}
 
 
@@ -460,8 +460,3 @@ public class AiInterface : MonoBehaviour {
 
 
 }
-
-
-//########################################################################################################################################
-
-

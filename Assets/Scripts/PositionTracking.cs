@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Linq;
 
+//Todo: im Optionen-Menü noch debug-optionen um zb. das hier anzuzeigen, das added dann einfach zum game mode.
+
 public class PositionTracking : MonoBehaviour {
 
 	public GameObject trackOutline;

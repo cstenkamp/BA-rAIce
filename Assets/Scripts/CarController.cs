@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System;
-
+using System.Linq;
 
 //hierein die funktion zum reset bei Wandkontakt. Kann dafür im start() nen trigger an alle wände setzen, und OnTriggerEnter (Collider other) das auto (falls flag true) resetten
 
@@ -61,7 +61,7 @@ public class CarController : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate ()
 	{
-		if (Game.mode=="driving")
+		if (Game.mode.Contains("driving"))
 		{
 			// check surfaces
 			AdjustFriction(colliderFL, "FL");
@@ -125,7 +125,7 @@ public class CarController : MonoBehaviour {
 	void Update()
 	{
 
-        if (Game.mode=="driving")
+		if (Game.mode.Contains("menu"))
 		{
 			// reverse gear
 			if (Input.GetKeyDown(KeyCode.R)) { gear *= -1.0f; }

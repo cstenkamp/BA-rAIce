@@ -1,22 +1,15 @@
 ﻿//MAIN TODO HIER: 
-//1. die using von hier und vom AIInterface entsprechend aussortieren
+//      1. die using von hier und vom AIInterface entsprechend aussortieren
 //2. Warum wird laut console ein object weiter-used after being disposed?
-//3. Wenn er nen paar mal versucht hat den server anzupingen und er ist nicht da, gibt auf
+//      3. Wenn er nen paar mal versucht hat den server anzupingen und er ist nicht da, gibt auf
 //4. Feedback und Delta mitsenden
 //5. Am Anfang des Spiels die globalen params mitschicken (like, welche vektoren er senden wird), damit man nicht beides in python UND unity ändern muss
-
-using UnityEngine;
-using System.Collections;
 
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Text;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Collections.Generic;
-using System.Linq;
 
 //stems from the Microsoft example... fun thing is only that it simply doesn't run asynchronously, haha.
 
@@ -24,6 +17,13 @@ using System.Linq;
 public class AsynchronousClient {  //updating python's value should happen asynchronously.
 
 	private const int WAITFORSERVER = 100;
+	private static int serverconnecttrials = 0;
+	private const int MAXCONNECTTRIALS = 2;
+	public static bool serverdown = true;
+
+	public static void ResetServerConnectTrials() {
+		serverconnecttrials = 0;
+	}
 
 	private static string preparestring(string fromwhat) {
 		int len = fromwhat.Length;
@@ -42,6 +42,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 	//we have a sender-client, who every x seconds updates python's status
 	public static void StartSenderClient(string data) {  
+		if ((serverconnecttrials > MAXCONNECTTRIALS) || (serverdown)) { serverdown = true; return; }
 		try {  
 			connectDone = new ManualResetEvent(false);   
 			sendDone = new ManualResetEvent(false);  
@@ -74,6 +75,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll? Ja
 	public static void StartGetterClient() {  
+		if ((serverconnecttrials > MAXCONNECTTRIALS) || (serverdown)) { serverdown = true; return; }
 		try {  
 			connectDone = new ManualResetEvent(false);   
 			sendDone = new ManualResetEvent(false); 
@@ -90,7 +92,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 				client.Shutdown(SocketShutdown.Send);  
 				client.Close();  
 			}
-		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString());  }  
+		} catch (System.Threading.ThreadAbortException) { } 
+		  catch (Exception e) { UnityEngine.Debug.Log(e.ToString());  }  
 	}  
 
 
@@ -102,7 +105,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			connectDone.Set();  
 		} catch (Exception e) {  
 			//hier kommt er rein wenn kein Server da ist, und hier soll er sich sagen "pff", wenn kein Server da ist.
-			//TODO: hier könnte er die ersten 10 male noch warten, und ab dem 11. mal das ganze deaktivieren, davon ausgehend das kein server kommt. Wieder aktivieren wenn escape gedrückt wird.
+			serverconnecttrials += 1;
 			UnityEngine.Debug.Log(e.ToString());  
 		}  
 	}  
@@ -124,7 +127,6 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 	private static void ReceiveCallback( IAsyncResult ar ) {  
 		try {  
-			//This callback will also be called if the client is already disposed - which is why we catch that.
 			StateObject state = (StateObject) ar.AsyncState;  // Retrieve the state object and the client socket 
 			Socket client = state.workSocket;  
 			int bytesRead = client.EndReceive(ar); // Read data from the remote device. 
@@ -140,7 +142,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 				}  
 				receiveDone.Set();  
 			}  
-		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString()); }    //TODO: wenn er mit server verbunden ist, kommt hier noch die meldung "object was used after being disposed", which sucks!
+		} catch (System.ObjectDisposedException e) { } //This callback will also be called if the client is already disposed - which is why we catch that.
+		  catch (Exception e) { UnityEngine.Debug.Log(e.ToString()); }    
 	}  
 
 

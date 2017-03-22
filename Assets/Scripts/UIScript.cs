@@ -135,12 +135,33 @@ public class UIScript : MonoBehaviour {
 
 	void DrivingOverlayHandling()
 	{
-		// enable/ disable driving overlay
-		if (Game.mode == "driving" && drivingOverlayActive == false) { UiBgTop.SetActive(true); UiBgBottom.SetActive(true); UiFeedbackBg.SetActive(true); UiSteering.SetActive(true); UiThrottle.SetActive(true); UiBrake.SetActive(true); UiPosYBg.SetActive(true); UiLookAheadBg.SetActive(true); UiProgressVectorBg.SetActive(true); UiCenterDistanceVectorBg.SetActive(true); carPosY.enabled=true; Speedometer.enabled=true;  FSlipFL.enabled=true; FSlipFR.enabled=true; FSlipRL.enabled=true; FSlipRR.enabled=true; SSlipFL.enabled=true; SSlipFR.enabled=true; SSlipRL.enabled=true; SSlipRR.enabled=true; FSlipHeadline.enabled=true; SSlipHeadline.enabled=true; GearDisplay.enabled=true; CurrentLaptime.enabled=true; Delta.enabled=true; LastLaptime.enabled=true; FastestLaptime.enabled=true; Progress.enabled=true; LapCount.enabled=true; drivingOverlayActive=true; }
-		if (Game.mode != "driving" && drivingOverlayActive == true) { UiBgTop.SetActive(false); UiBgBottom.SetActive(false); UiFeedbackBg.SetActive(false); UiSteering.SetActive(false); UiThrottle.SetActive(false); UiBrake.SetActive(false); UiPosYBg.SetActive(false); UiLookAheadBg.SetActive(false); UiProgressVectorBg.SetActive(false); UiCenterDistanceVectorBg.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; FSlipFL.enabled=false; FSlipFR.enabled=false; FSlipRL.enabled=false; FSlipRR.enabled=false; SSlipFL.enabled=false; SSlipFR.enabled=false; SSlipRL.enabled=false; SSlipRR.enabled=false; FSlipHeadline.enabled=false; SSlipHeadline.enabled=false; GearDisplay.enabled=false; CurrentLaptime.enabled=false; Delta.enabled=false; LastLaptime.enabled=false; FastestLaptime.enabled=false; Progress.enabled=false; LapCount.enabled=false; drivingOverlayActive=false; }
-		
+
+		if (Game.mode.Contains("menu") && drivingOverlayActive == true) {  //TODO: wenn es ein anderes Pausenmenü gibt: das hier splitten.
+			UiBgTop.SetActive(false); UiBgBottom.SetActive(false); UiFeedbackBg.SetActive(false); UiSteering.SetActive(false); 
+			UiThrottle.SetActive(false); UiBrake.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; 
+			FSlipFL.enabled=false; FSlipFR.enabled=false; FSlipRL.enabled=false; FSlipRR.enabled=false; SSlipFL.enabled=false; SSlipFR.enabled=false; 
+			SSlipRL.enabled=false; SSlipRR.enabled=false; FSlipHeadline.enabled=false; SSlipHeadline.enabled=false; GearDisplay.enabled=false; 
+			CurrentLaptime.enabled=false; Delta.enabled=false; LastLaptime.enabled=false; FastestLaptime.enabled=false; Progress.enabled=false; 
+			LapCount.enabled=false; drivingOverlayActive=false; 
+			UiLookAheadBg.SetActive(false); UiProgressVectorBg.SetActive(false); UiCenterDistanceVectorBg.SetActive(false); UiPosYBg.SetActive (false);
+
+		}
+
+		if ((Game.mode.Contains("train_AI") || Game.mode.Contains("drive_AI")) && drivingOverlayActive == false) { 
+			UiLookAheadBg.SetActive(true); UiProgressVectorBg.SetActive(true); UiCenterDistanceVectorBg.SetActive(true); UiPosYBg.SetActive (true); carPosY.enabled=true; 
+		}
+
+		if (Game.mode.Contains("driving") && drivingOverlayActive == false) { 
+			UiBgTop.SetActive(true); UiBgBottom.SetActive(true); UiFeedbackBg.SetActive(true); UiSteering.SetActive(true); UiThrottle.SetActive(true); UiBrake.SetActive(true); 
+			Speedometer.enabled=true;  FSlipFL.enabled=true; FSlipFR.enabled=true; FSlipRL.enabled=true; FSlipRR.enabled=true; SSlipFL.enabled=true; 
+			SSlipFR.enabled=true; SSlipRL.enabled=true; SSlipRR.enabled=true; FSlipHeadline.enabled=true; SSlipHeadline.enabled=true; GearDisplay.enabled=true; 
+			CurrentLaptime.enabled=true; Delta.enabled=true; LastLaptime.enabled=true; FastestLaptime.enabled=true; Progress.enabled=true; LapCount.enabled=true; drivingOverlayActive=true;
+		}
+
+
+
 		// update UI elements during driving
-		if (Game.mode == "driving")
+		if (Game.mode.Contains("driving"))
 		{
 			// gear display
 			if (Car.gear < 0.0f) { GearDisplay.enabled = true; }
@@ -238,61 +259,63 @@ public class UIScript : MonoBehaviour {
 			throttlePedal.rectTransform.sizeDelta = new Vector2(brakePedal.rectTransform.sizeDelta.x, Car.throttlePedalValue*65.0f);
 			brakePedal.rectTransform.sizeDelta = new Vector2(brakePedal.rectTransform.sizeDelta.x, Car.brakePedalValue*65.0f);
 
-			// current posY
-			posY = Tracking.GetCenterDist()*7.4f;
-			carPosY.rectTransform.position = new Vector3(UiPosYBg.transform.position.x+posY, carPosY.rectTransform.position.y, carPosY.rectTransform.position.z);
 
-			// current lookAhead
-			float[] lookAheadVector = Ai.GetLookAheadVector(10,20.0f);
-			float pxOffsetLookAhead = 1.0f;
-			LookAheadPoint_1.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[9]*pxOffsetLookAhead, LookAheadPoint_1.rectTransform.position.y, LookAheadPoint_1.rectTransform.position.z);
-			LookAheadPoint_2.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[8]*pxOffsetLookAhead, LookAheadPoint_2.rectTransform.position.y, LookAheadPoint_2.rectTransform.position.z);
-			LookAheadPoint_3.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[7]*pxOffsetLookAhead, LookAheadPoint_3.rectTransform.position.y, LookAheadPoint_3.rectTransform.position.z);
-			LookAheadPoint_4.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[6]*pxOffsetLookAhead, LookAheadPoint_4.rectTransform.position.y, LookAheadPoint_4.rectTransform.position.z);
-			LookAheadPoint_5.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[5]*pxOffsetLookAhead, LookAheadPoint_5.rectTransform.position.y, LookAheadPoint_5.rectTransform.position.z);
-			LookAheadPoint_6.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[4]*pxOffsetLookAhead, LookAheadPoint_6.rectTransform.position.y, LookAheadPoint_6.rectTransform.position.z);
-			LookAheadPoint_7.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[3]*pxOffsetLookAhead, LookAheadPoint_7.rectTransform.position.y, LookAheadPoint_7.rectTransform.position.z);
-			LookAheadPoint_8.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[2]*pxOffsetLookAhead, LookAheadPoint_8.rectTransform.position.y, LookAheadPoint_8.rectTransform.position.z);
-			LookAheadPoint_9.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[1]*pxOffsetLookAhead, LookAheadPoint_9.rectTransform.position.y, LookAheadPoint_9.rectTransform.position.z);
-			LookAheadPoint_10.rectTransform.position = new Vector3(UiLookAheadBg.transform.position.x+lookAheadVector[0]*pxOffsetLookAhead, LookAheadPoint_10.rectTransform.position.y, LookAheadPoint_10.rectTransform.position.z);
+			if (Game.mode.Contains("train_AI") || Game.mode.Contains("drive_AI")) {
+				// current posY
+				posY = Tracking.GetCenterDist () * 7.4f;
+				carPosY.rectTransform.position = new Vector3 (UiPosYBg.transform.position.x + posY, carPosY.rectTransform.position.y, carPosY.rectTransform.position.z);
 
-			// current progressVector
-			float[] progressVector = Ai.GetProgressVector(10,0.08f);
-			ProgressCell_1.rectTransform.position = new Vector3(ProgressCell_1.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[0]*22.0f-18.0f, ProgressCell_1.rectTransform.position.z);
-			ProgressCell_2.rectTransform.position = new Vector3(ProgressCell_2.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[1]*22.0f-18.0f, ProgressCell_2.rectTransform.position.z);
-			ProgressCell_3.rectTransform.position = new Vector3(ProgressCell_3.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[2]*22.0f-18.0f, ProgressCell_3.rectTransform.position.z);
-			ProgressCell_4.rectTransform.position = new Vector3(ProgressCell_4.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[3]*22.0f-18.0f, ProgressCell_4.rectTransform.position.z);
-			ProgressCell_5.rectTransform.position = new Vector3(ProgressCell_5.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[4]*22.0f-18.0f, ProgressCell_5.rectTransform.position.z);
-			ProgressCell_6.rectTransform.position = new Vector3(ProgressCell_6.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[5]*22.0f-18.0f, ProgressCell_6.rectTransform.position.z);
-			ProgressCell_7.rectTransform.position = new Vector3(ProgressCell_7.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[6]*22.0f-18.0f, ProgressCell_7.rectTransform.position.z);
-			ProgressCell_8.rectTransform.position = new Vector3(ProgressCell_8.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[7]*22.0f-18.0f, ProgressCell_8.rectTransform.position.z);
-			ProgressCell_9.rectTransform.position = new Vector3(ProgressCell_9.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[8]*22.0f-18.0f, ProgressCell_9.rectTransform.position.z);
-			ProgressCell_10.rectTransform.position = new Vector3(ProgressCell_10.transform.position.x, UiProgressVectorBg.transform.position.y+progressVector[9]*22.0f-18.0f, ProgressCell_10.rectTransform.position.z);
+				// current lookAhead
+				float[] lookAheadVector = Ai.GetLookAheadVector (10, 20.0f);
+				float pxOffsetLookAhead = 1.0f;
+				LookAheadPoint_1.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [9] * pxOffsetLookAhead, LookAheadPoint_1.rectTransform.position.y, LookAheadPoint_1.rectTransform.position.z);
+				LookAheadPoint_2.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [8] * pxOffsetLookAhead, LookAheadPoint_2.rectTransform.position.y, LookAheadPoint_2.rectTransform.position.z);
+				LookAheadPoint_3.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [7] * pxOffsetLookAhead, LookAheadPoint_3.rectTransform.position.y, LookAheadPoint_3.rectTransform.position.z);
+				LookAheadPoint_4.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [6] * pxOffsetLookAhead, LookAheadPoint_4.rectTransform.position.y, LookAheadPoint_4.rectTransform.position.z);
+				LookAheadPoint_5.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [5] * pxOffsetLookAhead, LookAheadPoint_5.rectTransform.position.y, LookAheadPoint_5.rectTransform.position.z);
+				LookAheadPoint_6.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [4] * pxOffsetLookAhead, LookAheadPoint_6.rectTransform.position.y, LookAheadPoint_6.rectTransform.position.z);
+				LookAheadPoint_7.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [3] * pxOffsetLookAhead, LookAheadPoint_7.rectTransform.position.y, LookAheadPoint_7.rectTransform.position.z);
+				LookAheadPoint_8.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [2] * pxOffsetLookAhead, LookAheadPoint_8.rectTransform.position.y, LookAheadPoint_8.rectTransform.position.z);
+				LookAheadPoint_9.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [1] * pxOffsetLookAhead, LookAheadPoint_9.rectTransform.position.y, LookAheadPoint_9.rectTransform.position.z);
+				LookAheadPoint_10.rectTransform.position = new Vector3 (UiLookAheadBg.transform.position.x + lookAheadVector [0] * pxOffsetLookAhead, LookAheadPoint_10.rectTransform.position.y, LookAheadPoint_10.rectTransform.position.z);
 
-			// current centerDistVector
-			float[] centerDistanceVector = Ai.GetCenterDistVector(10,1.5f,1.0f);
-			DistanceCell_1.rectTransform.position = new Vector3(DistanceCell_1.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[9]*100.0f-18.0f, DistanceCell_1.rectTransform.position.z);
-			DistanceCell_2.rectTransform.position = new Vector3(DistanceCell_2.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[8]*100.0f-18.0f, DistanceCell_2.rectTransform.position.z);
-			DistanceCell_3.rectTransform.position = new Vector3(DistanceCell_3.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[7]*100.0f-18.0f, DistanceCell_3.rectTransform.position.z);
-			DistanceCell_4.rectTransform.position = new Vector3(DistanceCell_4.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[6]*100.0f-18.0f, DistanceCell_4.rectTransform.position.z);
-			DistanceCell_5.rectTransform.position = new Vector3(DistanceCell_5.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[5]*100.0f-18.0f, DistanceCell_5.rectTransform.position.z);
-			DistanceCell_6.rectTransform.position = new Vector3(DistanceCell_6.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[4]*100.0f-18.0f, DistanceCell_6.rectTransform.position.z);
-			DistanceCell_7.rectTransform.position = new Vector3(DistanceCell_7.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[3]*100.0f-18.0f, DistanceCell_7.rectTransform.position.z);
-			DistanceCell_8.rectTransform.position = new Vector3(DistanceCell_8.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[2]*100.0f-18.0f, DistanceCell_8.rectTransform.position.z);
-			DistanceCell_9.rectTransform.position = new Vector3(DistanceCell_9.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[1]*100.0f-18.0f, DistanceCell_9.rectTransform.position.z);
-			DistanceCell_10.rectTransform.position = new Vector3(DistanceCell_10.transform.position.x, UiCenterDistanceVectorBg.transform.position.y+centerDistanceVector[0]*100.0f-18.0f, DistanceCell_10.rectTransform.position.z);
+				// current progressVector
+				float[] progressVector = Ai.GetProgressVector (10, 0.08f);
+				ProgressCell_1.rectTransform.position = new Vector3 (ProgressCell_1.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [0] * 22.0f - 18.0f, ProgressCell_1.rectTransform.position.z);
+				ProgressCell_2.rectTransform.position = new Vector3 (ProgressCell_2.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [1] * 22.0f - 18.0f, ProgressCell_2.rectTransform.position.z);
+				ProgressCell_3.rectTransform.position = new Vector3 (ProgressCell_3.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [2] * 22.0f - 18.0f, ProgressCell_3.rectTransform.position.z);
+				ProgressCell_4.rectTransform.position = new Vector3 (ProgressCell_4.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [3] * 22.0f - 18.0f, ProgressCell_4.rectTransform.position.z);
+				ProgressCell_5.rectTransform.position = new Vector3 (ProgressCell_5.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [4] * 22.0f - 18.0f, ProgressCell_5.rectTransform.position.z);
+				ProgressCell_6.rectTransform.position = new Vector3 (ProgressCell_6.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [5] * 22.0f - 18.0f, ProgressCell_6.rectTransform.position.z);
+				ProgressCell_7.rectTransform.position = new Vector3 (ProgressCell_7.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [6] * 22.0f - 18.0f, ProgressCell_7.rectTransform.position.z);
+				ProgressCell_8.rectTransform.position = new Vector3 (ProgressCell_8.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [7] * 22.0f - 18.0f, ProgressCell_8.rectTransform.position.z);
+				ProgressCell_9.rectTransform.position = new Vector3 (ProgressCell_9.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [8] * 22.0f - 18.0f, ProgressCell_9.rectTransform.position.z);
+				ProgressCell_10.rectTransform.position = new Vector3 (ProgressCell_10.transform.position.x, UiProgressVectorBg.transform.position.y + progressVector [9] * 22.0f - 18.0f, ProgressCell_10.rectTransform.position.z);
 
+				// current centerDistVector
+				float[] centerDistanceVector = Ai.GetCenterDistVector (10, 1.5f, 1.0f);
+				DistanceCell_1.rectTransform.position = new Vector3 (DistanceCell_1.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [9] * 100.0f - 18.0f, DistanceCell_1.rectTransform.position.z);
+				DistanceCell_2.rectTransform.position = new Vector3 (DistanceCell_2.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [8] * 100.0f - 18.0f, DistanceCell_2.rectTransform.position.z);
+				DistanceCell_3.rectTransform.position = new Vector3 (DistanceCell_3.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [7] * 100.0f - 18.0f, DistanceCell_3.rectTransform.position.z);
+				DistanceCell_4.rectTransform.position = new Vector3 (DistanceCell_4.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [6] * 100.0f - 18.0f, DistanceCell_4.rectTransform.position.z);
+				DistanceCell_5.rectTransform.position = new Vector3 (DistanceCell_5.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [5] * 100.0f - 18.0f, DistanceCell_5.rectTransform.position.z);
+				DistanceCell_6.rectTransform.position = new Vector3 (DistanceCell_6.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [4] * 100.0f - 18.0f, DistanceCell_6.rectTransform.position.z);
+				DistanceCell_7.rectTransform.position = new Vector3 (DistanceCell_7.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [3] * 100.0f - 18.0f, DistanceCell_7.rectTransform.position.z);
+				DistanceCell_8.rectTransform.position = new Vector3 (DistanceCell_8.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [2] * 100.0f - 18.0f, DistanceCell_8.rectTransform.position.z);
+				DistanceCell_9.rectTransform.position = new Vector3 (DistanceCell_9.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [1] * 100.0f - 18.0f, DistanceCell_9.rectTransform.position.z);
+				DistanceCell_10.rectTransform.position = new Vector3 (DistanceCell_10.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [0] * 100.0f - 18.0f, DistanceCell_10.rectTransform.position.z);
+			}
 		}
 	}
 
 	void MenuOverlayHandling()
 	{
 		// enable/ disable menu overlay
-		if (Game.mode == "menu" && menuOverlayActive == false) { UiBgMenucover.SetActive(true); UiTextDrive.enabled=true; UiTextTrainAI.enabled=true; UiTextDriveAI.enabled=true; UiTextOptions.enabled=true; UiTextQuit.enabled=true; menuOverlayActive=true; }
-		if (Game.mode != "menu" && menuOverlayActive == true) { UiBgMenucover.SetActive(false); UiBgButtonDrive.SetActive(false); UiBgButtonDrive.SetActive(false); UiTextDrive.enabled=false; UiTextTrainAI.enabled=false; UiTextDriveAI.enabled=false; UiTextOptions.enabled=false; UiTextQuit.enabled=false; menuOverlayActive=false; }
+		if (Game.mode.Contains("menu") && menuOverlayActive == false) { UiBgMenucover.SetActive(true); UiTextDrive.enabled=true; UiTextTrainAI.enabled=true; UiTextDriveAI.enabled=true; UiTextOptions.enabled=true; UiTextQuit.enabled=true; menuOverlayActive=true; }
+		if (Game.mode.Contains("driving") && menuOverlayActive == true) { UiBgMenucover.SetActive(false); UiBgButtonDrive.SetActive(false); UiBgButtonDrive.SetActive(false); UiTextDrive.enabled=false; UiTextTrainAI.enabled=false; UiTextDriveAI.enabled=false; UiTextOptions.enabled=false; UiTextQuit.enabled=false; menuOverlayActive=false; }
 	
 		// menu interface
-		if (Game.mode == "menu")
+		if (Game.mode.Contains("menu"))
 		{
 			switch (menuSelection)
 			{
@@ -336,10 +359,22 @@ public class UIScript : MonoBehaviour {
 			// check for inputs
 			if (menuSelection < 4 && Input.GetKeyDown(KeyCode.DownArrow)) { menuSelection += 1; }
 			if (menuSelection > 0 && Input.GetKeyDown(KeyCode.UpArrow)) { menuSelection -= 1; }
-			
-			// switch game mode
-			if (menuSelection == 0 && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))) { Game.SwitchMode("driving"); }
-			if (menuSelection == 4 && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))) { Application.Quit(); }
+
+			if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+			{
+				UiBgButtonDrive.SetActive(false);
+				UiBgButtonTrainAI.SetActive(false);
+				UiBgButtonDriveAI.SetActive(false);
+				UiBgButtonOptions.SetActive(false);
+				UiBgButtonQuit.SetActive(false);				
+
+				// switch game mode
+				if (menuSelection == 0) { Game.SwitchMode("driving"); }
+				if (menuSelection == 1) { Game.SwitchMode("train_AI"); }
+				if (menuSelection == 2) { Game.SwitchMode("drive_AI"); }
+				//if (menuSelection == 3) { Game.SwitchMode("options"); }
+				if (menuSelection == 4) { Application.Quit(); }
+			}
 		}
 	}
 

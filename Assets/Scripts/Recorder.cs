@@ -4,13 +4,19 @@ using System.Collections.Generic;
 using System;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Threading;
 
 public class Recorder : MonoBehaviour {
+
+	//this is only true in the "train AI supervisedly"-mode
+	public static bool sv_save_round = true;
+
 
 	// external scripts & stuff
 	public TimingScript Timing;
 	public PositionTracking Tracking;
 	public CarController Car;
+	public AiInterface AiInt;
 
 	// für's timen der besten runde
 	public List<PointInTime> thisLap; //eigene klasse, siehe unten
@@ -20,21 +26,20 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	private const int trackAllXMS = 100;
+	private const int trackAllXMS = 10;
 	private int lasttrack = Environment.TickCount;
 
 
 
 	void FixedUpdate() {
-		int currtime = Environment.TickCount;
-		if (currtime - lasttrack > trackAllXMS) {
-
-			SVLearnUpdateList ();
-			lasttrack = currtime;
+		if (sv_save_round) {
+			int currtime = Environment.TickCount;
+			if (currtime - lasttrack > trackAllXMS) {
+				SVLearnUpdateList ();
+				lasttrack = currtime;
+			}
 		}
 	}
-
-
 
 
 
@@ -54,9 +59,9 @@ public class Recorder : MonoBehaviour {
 		thisLap = new List<PointInTime>();
 		thisLap.Add(new PointInTime(0.0f, 0.0f));
 
-		if (Consts.record_all_inputs) {
+		if (sv_save_round) {
 			SVLearnLap = new List<TrackingPoint> ();
-			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f)); //TODO: sollte er nicht auch beim SV-Learning den Visionvector etc durchgehend mit-recorden???
+			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, AiInt.load_infos(false,true))); 
 		}
 	}
 
@@ -69,12 +74,12 @@ public class Recorder : MonoBehaviour {
 
 	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
 	public void SVLearnUpdateList(){
-		if (Consts.record_all_inputs) {
-			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress));
+		if (sv_save_round) {
+			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, AiInt.load_infos(false,true)));
 		}
 	}
 
-
+	//FinishList wird im TimingScript ausgeführt, bei Triggerkollision mit dem Start/Ziel-Trigger, und zwar nur wenn activeLap && ccPassed && Car.lapClean
 	public void FinishList()
 	{
 		thisLap.Add(new PointInTime(Timing.lastLapTime, 1.0f));
@@ -85,16 +90,17 @@ public class Recorder : MonoBehaviour {
 			SaveLap(fastestLap, "fastlap");
 		}
 
-		//TODO woher weiß ich eigentlich, dass er nr valid runden zählt??
-		SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f));
-		SaveSVLearnLap (SVLearnLap, "complete_" + DateTime.Now.ToString ("MM_dd_yy_h_mm_ss")); 
-
+		if (sv_save_round) {
+			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, AiInt.load_infos (false, true)));
+			SaveSVLearnLapStart (SVLearnLap, "complete_" + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss")); 
+		}
 	}
 
 	// ##################################
 	// ###### ADDITIONAL FUNCTIONS ######
 	// ##################################
 	//TODO: diese werden gebraucht um anhand derer supervisedly zu lernen! ...und möglicherweise noch mehr?
+	//TODO: in jedem Fall diese hier mitsenden... :/
 
 	public float GetDelta() //für das Sekunden-Delta im UI
 	{
@@ -127,17 +133,19 @@ public class Recorder : MonoBehaviour {
 
 	//TODO ResetLap in der noch-kommenden Neustart-funktion nutzen!
 	//TODO ne resetlap für das svlearnlapdingsi!
-	public void ResetLap()
-	{
-		thisLap = new List<PointInTime>();
-	}
-
-	public void ResetAll()
-	{
-		thisLap = new List<PointInTime>();
-		lastLap = new List<PointInTime>();
-		fastestLap = new List<PointInTime>();
-	}
+	//TODO das was hier ^ steht, aber nicht mit der ResetLap-funktion, da das sdie startlap funktion schon macht.
+//	public void ResetLap()
+//	{
+//		thisLap = new List<PointInTime>();
+//		SVLearnLap = new 
+//	}
+//
+//	public void ResetAll()
+//	{
+//		ResetLap ();
+//		lastLap = new List<PointInTime>();
+//		fastestLap = new List<PointInTime>();
+//	}
 
 	//braucht er scheinbar nicht?
 //	private List<PointInTime> CloneLap(List<PointInTime> originalLap)
@@ -154,16 +162,26 @@ public class Recorder : MonoBehaviour {
 	// #### SAVE & LOAD COMPLETE LAP ####
 	// ##################################
 
+	public void SaveSVLearnLapStart(List<TrackingPoint> SVLearnLap, string fileName) 
+	{
+		if (sv_save_round) {
+			var t = new Thread (() => SaveSVLearnLap (SVLearnLap, fileName)); 
+			t.Start ();
+		}
+	}
+
 	public void SaveSVLearnLap(List<TrackingPoint> SVLearnLap, string fileName) 
 	{
-		if (!Directory.Exists("SavedLaps/")) {
-			Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
-		} else {
-			BinaryFormatter bf = new BinaryFormatter();
-			FileStream file = File.Create("SavedLaps/" + fileName + ".svlap");
-			bf.Serialize(file, SVLearnLap);
-			file.Close();
-		}	
+		if (sv_save_round) {
+			if (!Directory.Exists ("SavedLaps/")) {
+				Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
+			} else {
+				System.Xml.Serialization.XmlSerializer xs = new System.Xml.Serialization.XmlSerializer (SVLearnLap.GetType ());
+				FileStream file = File.Create ("SavedLaps/" + fileName + ".svlap");
+				xs.Serialize (file, SVLearnLap);
+				file.Close ();
+			}	
+		}
 	}
 
 
@@ -208,9 +226,9 @@ public class PointInTime
 	public PointInTime(float newTime, float newProgress) { time = newTime; progress = newProgress; }
 }
 	
-// fürs alles-tracken ne ähnliche klasse machen, die zu jedem frame (oder x mal die sekunde), nicht nur jedem xten positiontracker, alles inkl. inputs trackt und speichert als NN-inputs 
-// (als file, das der fürs supervised-learning auspackt)
 
+
+//diese Klasse ist für's supervisedly learning: alle x Millisekunden speichert sie alle nötigen informaitonen für's supervised-learning (als NN-Input für python)
 [Serializable]
 public class TrackingPoint
 {
@@ -220,14 +238,16 @@ public class TrackingPoint
 	public float brakePedalValue;
 	public float steeringValue;
 	public float progress;
+	public string vectors;
 
 	// constructors
 	public TrackingPoint(){}
-	public TrackingPoint(float newtime, float newthrottlePedalValue, float newbrakePedalValue, float newsteeringValue, float newprogress) { 
+	public TrackingPoint(float newtime, float newthrottlePedalValue, float newbrakePedalValue, float newsteeringValue, float newprogress, string newvectors) { 
 		time = newtime;
 		throttlePedalValue = newthrottlePedalValue; 
 		brakePedalValue = newbrakePedalValue; 
 		steeringValue = newsteeringValue; 
 		progress = newprogress;
+		vectors = newvectors;
 	}
 }
