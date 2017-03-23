@@ -105,27 +105,27 @@ public class CarController : MonoBehaviour {
 
 
 
-            // accelerate
-            if (AiInt.AITakingControl == false) { 
+			if (AiInt.AITakingControl == false) { 
+				// accelerate
                 colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear;
                 colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
+				// brake
+				colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
+				colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
+				colliderRL.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
+				colliderRR.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
+				// steer
+				colliderFL.steerAngle = maxSteer * steeringValue;
+				colliderFR.steerAngle = maxSteer * steeringValue;
             }
 
-            // brake
-            colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
-			colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
-			colliderRL.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
-			colliderRR.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
-            // steer
-            colliderFL.steerAngle = maxSteer * steeringValue;
-			colliderFR.steerAngle = maxSteer * steeringValue;
 		}
 	}
 
 	void Update()
 	{
 
-		if (Game.mode.Contains("menu"))
+		if (Game.mode.Contains("driving"))
 		{
 			// reverse gear
 			if (Input.GetKeyDown(KeyCode.R)) { gear *= -1.0f; }

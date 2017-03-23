@@ -20,11 +20,11 @@ public static class Consts {
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 42; //42
 
-	public const bool record_all_inputs = true;
-
 	public const bool debug_show_visiondisp = false;
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
+
+	public const bool wallhit_means_reset = true;
 }
 
 

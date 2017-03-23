@@ -56,6 +56,7 @@
      <Compile Include="Assets\Scripts\Recorder.cs" />
      <Compile Include="Assets\Scripts\TimingScript.cs" />
      <Compile Include="Assets\Scripts\UIScript.cs" />
+     <Compile Include="Assets\Scripts\WallColliderScript.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>
