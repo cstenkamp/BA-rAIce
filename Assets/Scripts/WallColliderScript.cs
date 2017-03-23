@@ -5,6 +5,11 @@ using UnityEngine;
 public class WallColliderScript : MonoBehaviour {
 
 	public CarController Car;
+	public PositionTracking Pos;
+	public TimingScript Timing;
+
+	public const int TIMEPUNISH = 5;
+	public const int POSITIONPUNISH = 2;
 
 	// Use this for initialization
 	void Start () {
@@ -18,8 +23,11 @@ public class WallColliderScript : MonoBehaviour {
 
 	void OnCollisionEnter(Collision collision) {
 		if (Consts.wallhit_means_reset) {
-			//TODO: reset to last checkpoint with time-punishment
-			Car.ResetCar ();
+			Vector3 Position = Pos.anchorVector [Pos.getClosestAnchorBehind (Car.transform.position) - POSITIONPUNISH]; //TODO: das führt bestimmt noch bei einigen positions zu nem indexerror.
+			Position.y = Car.startPosition.y;
+			Quaternion Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[Pos.getClosestAnchorBehind(Car.transform.position)-POSITIONPUNISH], Vector3.up); 
+			Timing.PunishTime (TIMEPUNISH);
+			Car.ResetToPosition (Position, Angle, true);
 		}
 	}
 }

@@ -2,7 +2,8 @@
 using System.Collections;
 using System.Linq;
 
-//Todo: im Optionen-Menü noch debug-optionen um zb. das hier anzuzeigen, das added dann einfach zum game mode.
+//TODO: im Optionen-Menü noch debug-optionen um zb. das hier anzuzeigen, das added dann einfach zum game mode.
+//TODO: eine funktion, die ALLES back-upt, furs hardreset (siehe AiInterface). Die kann dann bei, say, 10% der Strecke gecallt werden und ist im pausenmenu available
 
 public class PositionTracking : MonoBehaviour {
 
@@ -183,6 +184,7 @@ public class PositionTracking : MonoBehaviour {
 		return absoluteAnchorAngles;
 	}
 
+
 	//progress eines anchors in prozent von der gesamtlange der strecke 
 	float[] GetAbsoluteAnchorProgress(Vector3[] anchorVector)
 	{
@@ -258,6 +260,16 @@ public class PositionTracking : MonoBehaviour {
 		int closestAnchor = distanceVector.ToList().IndexOf(distanceVector.Min());
 		return closestAnchor;
 	}
+
+	//das hier ist fürs Car resetten. Er soll ja nicht auf den Vektor vor sich resetten, sondern immer auf den hinter sich.
+	public int getClosestAnchorBehind(Vector3 carPosition) {
+		int closestAnchor = GetClosestAnchor(carPosition);
+		if (ProgressFromClosestAnchor (carPosition, anchorVector, closestAnchor) < 0.0f) {
+			closestAnchor -= 1;
+		}
+		return closestAnchor;
+	}
+
 
 	//converts the absolute position in anchors to a percentage of the whole track
 	float ProgressConvert(float progressRelative, float[] segmentLengths)
@@ -349,7 +361,6 @@ public class PositionTracking : MonoBehaviour {
 	// ######################### TRIGGER HANDLING ##########################
 	// #####################################################################
 
-	//wie werden diese trigger erzeugt? Kann ich so nen trigger die ganze wand entlang machen?
 	void TriggerRec(float progress, float inc)
 	{
 		if (progress > triggerCount*inc/100.0f)

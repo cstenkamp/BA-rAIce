@@ -20,15 +20,20 @@ public class TimingScript : MonoBehaviour {
 	// variables for lapSaving
 	public Recorder Rec;
 
+	private float time_punishs;
+
 	// Use this for initialization
-	void Start () {}
+	void Start () 
+	{
+		time_punishs = 0;	
+	}
 	
 	// Update is called once per frame
 	void Update ()
 	{
 		if (activeLap)
 		{
-			currentLapTime = Time.time - currentLapStart;
+			currentLapTime = Time.time - currentLapStart + time_punishs;
 		}
 	}
 
@@ -54,7 +59,16 @@ public class TimingScript : MonoBehaviour {
 		currentLapStart = Time.time;
 		Car.LapCleanTrue();
 		ccPassed = false; //wird erst wieder true wenn man durch den zweiten collider ist, und wieder falls sobald man cheatenderweise nochmal anschließend zurückfährt (deswegen da ontriggerexit!)
+		time_punishs = 0;
 	}
+
+	public void PunishTime(float howmuch) 
+	{
+		if (activeLap)
+			time_punishs += howmuch;
+	}
+
+	//TODO: Ich glaube es wird bspw beim menu offnen timing.reset aufgerufen obwohl es timing.stop sein sollte
 
 	// Reset Timing Script
 	public void ResetTiming()

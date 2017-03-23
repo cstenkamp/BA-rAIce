@@ -5,7 +5,9 @@ using System.Text;
 using System.Linq;
 
 
-
+//TODO: eine funktion die neu-rendern enforced (wird gecallt nach jedem reset, bspw)
+//TODO: optionen: -reset all laps, -wallhit means reset, -aktiviere debugstuff  (optionen konnten auch einfach zum gamemode adden, oder halt ne eigene klasse sein)
+//TODO: ein anderes pausemenu (continue, reset to last position, back to main menu)
 
 public class UIScript : MonoBehaviour {
 

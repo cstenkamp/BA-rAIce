@@ -3,13 +3,12 @@ using System.Collections;
 using System;
 using System.Linq;
 
-//hierein die funktion zum reset bei Wandkontakt. Kann dafür im start() nen trigger an alle wände setzen, und OnTriggerEnter (Collider other) das auto (falls flag true) resetten
-
 
 public class CarController : MonoBehaviour {
 
 	public GameScript Game;
     public AiInterface AiInt;
+	public TimingScript Timing;
 
 	public float throttlePedalValue;
 	public float brakePedalValue;
@@ -41,8 +40,8 @@ public class CarController : MonoBehaviour {
 	public float gear = 1.0f;
 	float BrakeBias = 0.65f; // fraction of brake torque applied to front wheels: 0.67
 
-	Vector3 startPosition = new Vector3(48.0f,1.1f,150.0f);
-	Quaternion startRotation = new Quaternion(0.0f,180.0f,0.0f,0.0f);
+	public Vector3 startPosition = new Vector3(48.0f,1.1f,150.0f);
+	public Quaternion startRotation = new Quaternion(0.0f,180.0f,0.0f,0.0f);
 	Vector3 lastPosition;
 	float lastTime;
 	float deltaPosition;
@@ -182,11 +181,19 @@ public class CarController : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
 	}
 
-	public void ResetCar() //TODO: das hier nicht nur für den start, sondern für alle möglichen reset-punkte
+	public void ResetCar() {
+		ResetToPosition (startPosition, startRotation, false);
+	}
+
+	public void ResetToPosition(Vector3 Position, Quaternion Rotation, bool make_valid)
 	{
+		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
+		//TODO: sicher dass ich nichts kaputt mache durch das lap-clean-enforcen?
+		//TODO: das was hier passiert reicht noch nicht, sonst wuerde ich nicht nach vorne rollen.
+
 		// reset the car & kill innertia
-		Car.transform.position = startPosition;
-		Car.transform.rotation = startRotation;
+		Car.transform.position = Position;
+		Car.transform.rotation = Rotation;
 		Car.velocity = Vector3.zero;
 	    Car.angularVelocity = Vector3.zero;
 		
@@ -199,7 +206,25 @@ public class CarController : MonoBehaviour {
 		colliderRR.brakeTorque = 0.0f;
 		colliderFL.steerAngle = 0.0f;
 		colliderFR.steerAngle = 0.0f;
+
+		// send to python that stuff changed
+		AiInt.SendToPython ("reset", true);
+
+		if (make_valid && Timing.lapCount > 0)
+			lapClean = true;
+			
 	}
+
+
+	public void ResetCarWithSpeed() {
+		//TODO: das hier ist der cheater-modus, aber hier den perfekten reset machen!
+		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
+
+
+		AiInt.SendToPython ("reset", true);
+	}
+
+
 
 
 

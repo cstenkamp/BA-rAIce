@@ -6,6 +6,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Threading;
 
+//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
+//     resetten soll und alle keys nochmal genauso drücken soll
+
 public class Recorder : MonoBehaviour {
 
 	//this is only true in the "train AI supervisedly"-mode
@@ -130,33 +133,17 @@ public class Recorder : MonoBehaviour {
 	}
 
 
+	//TODO: nen flag, dass, wenn gesetzt, dafur sorgt dass er aufhort zu recorden
 
-	//TODO ResetLap in der noch-kommenden Neustart-funktion nutzen!
-	//TODO ne resetlap für das svlearnlapdingsi!
-	//TODO das was hier ^ steht, aber nicht mit der ResetLap-funktion, da das sdie startlap funktion schon macht.
-//	public void ResetLap()
-//	{
-//		thisLap = new List<PointInTime>();
-//		SVLearnLap = new 
-//	}
-//
 //	public void ResetAll()
 //	{
 //		ResetLap ();
 //		lastLap = new List<PointInTime>();
 //		fastestLap = new List<PointInTime>();
+// 		//TODO: so wie das hier ist machts keinen Sinn. Er sollte auch die files loschen, und dafur sorgen dass das nicht direkt neu geladen wird
+//		//TODO: in die optionen ne funktion zum loschen aller laps, die diese function callt
 //	}
 
-	//braucht er scheinbar nicht?
-//	private List<PointInTime> CloneLap(List<PointInTime> originalLap)
-//	{
-//		List<PointInTime> clonedLap = new List<PointInTime>();
-//		for (int i = 0; i < originalLap.Count; i++)
-//		{
-//			clonedLap.Add(originalLap[i]);
-//		}
-//		return clonedLap;
-//	}
 
 	// ##################################
 	// #### SAVE & LOAD COMPLETE LAP ####

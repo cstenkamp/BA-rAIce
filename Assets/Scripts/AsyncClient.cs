@@ -1,6 +1,6 @@
 ﻿//MAIN TODO HIER: 
 //      1. die using von hier und vom AIInterface entsprechend aussortieren
-//2. Warum wird laut console ein object weiter-used after being disposed?
+//		2. Warum wird laut console ein object weiter-used after being disposed?
 //      3. Wenn er nen paar mal versucht hat den server anzupingen und er ist nicht da, gibt auf
 //4. Feedback und Delta mitsenden
 //5. Am Anfang des Spiels die globalen params mitschicken (like, welche vektoren er senden wird), damit man nicht beides in python UND unity ändern muss

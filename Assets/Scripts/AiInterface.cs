@@ -68,58 +68,42 @@ public class AiInterface : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		SendToPython ("resetannvals", true);
+		if (Game.mode.Contains ("train_AI")) {
+			SendToPython ("resetannvals", true);
+		}
 	}
 
 	// Update is called once per frame
 	void Update () {
 		if (Game.mode.Contains ("train_AI")) {
-			//SendToPython (Twodarraytostr (Minmap.GetVisionDisplay ()));
-			//UnityEngine.Debug.Log (Twodarraytostr (Minmap.GetVisionDisplay ()));
-			//Twodarraytostr (Minmap.GetVisionDisplay ());
-
-			load_infos (false, false);
+			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
 		}
 	}
 
 	void FixedUpdate() {
 		if (Game.mode.Contains("train_AI")) {
 				
-			//TODO man sollte einen reset-befehl an den pythonserver schicken können (jedes mal beim neustart, und auch beim probweisen wiederherstellen hier!)
-			//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
-			//     resetten soll und alle keys nochmal genauso drücken sol
+//			Stopwatch stopwatch = new Stopwatch();
+//			stopwatch.Reset();
+//			stopwatch.Start();
 
-			Stopwatch stopwatch = new Stopwatch();
-			stopwatch.Reset();
-			stopwatch.Start();
+			SendToPython (load_infos (false, true), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.
+			AskForPython(); //Da diese funktion asynchron ist, gibts keinen returnwert, nur sooner or later geupdatete values.
 
-
-
-			SendToPython (load_infos (false, true), false);
-
-
-			AskForPython();
 			if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
 				
 				string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
-				stopwatch.Stop();
+//				stopwatch.Stop();
 				if (message == "pleasereset") {
-					AITakingControl = false;
-					//TODO: eine funktion die jederzeit gecallt werden kann (bspw bei 10% strecke), die die komplette position back-upt!!
-
-					//Vector3 newPos = new Vector3(48, 1, 150); 
-					//Car.transform.position = newPos;
-
-					//UnityEngine.Debug.Log ("HEEEEREEEEE");
-
-				//} else if (message == "turning") {
-					//AITakingControl = true;
-					//colliderRL.motorTorque = 1200.0f;
-					//colliderRR.motorTorque = 1200.0f;
-					//UnityEngine.Debug.Log ("Turning means Speeding" + "   mS: " + stopwatch.ElapsedMilliseconds);
+					AITakingControl = false; //TODO: diese AITakingControl muss im CarController eindeutiger und starker sein
+					Car.ResetCar ();
+				} else if (message == "turning") {
+					AITakingControl = true;
+					colliderRL.motorTorque = 1200.0f;
+					colliderRR.motorTorque = 1200.0f;
+					UnityEngine.Debug.Log ("Turning means Speeding"); // + "   mS: " + stopwatch.ElapsedMilliseconds);
 				} else {
 					AITakingControl = false;
-					//UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds + "   " + message);
 				}
 			}
 		}
@@ -132,10 +116,8 @@ public class AiInterface : MonoBehaviour {
 			lastpythonsent = GetAllInfos ();
 			lastgetvectortime = currtime;
 		}
-
 //		if (!Car.lapClean)
 //			tosend = "invalidround";
-//
 		return lastpythonsent;
 	}
 
@@ -192,23 +174,6 @@ public class AiInterface : MonoBehaviour {
 		//TODO: vom carstatusvektor fehlen noch ganz viele
 		//TODO: Delta und Feedback vom recorder ebenfalls returnen
 		return all;
-	}
-
-
-	public void ResetCarToMiddle() {
-
-		//TODO: mit der Carcontroller-funktion ResetCar arbeiten, die ist schon da!
-		//TODO: und recorder und timingscript haben beide auch reset-funktionen!
-
-		SendToPython ("reset", true);
-	}
-
-
-	public void ResetCarWithSpeed() {
-
-
-
-		SendToPython ("reset", true);
 	}
 
 
@@ -351,7 +316,7 @@ public class AiInterface : MonoBehaviour {
 
 	public void SetCarStatusFromVector(float[] carStatusVector) {
 		Car.velocity = carStatusVector [0] * 200;
-		//TODO: setslip undso... falls das geht.
+		//TODO: 'setslip' undso... falls das geht.
 
 	}
 
