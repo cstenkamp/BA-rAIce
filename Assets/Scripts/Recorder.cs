@@ -29,7 +29,7 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	private const int trackAllXMS = 10;
+	private const int trackAllXMS = 100; //bei alle 10ms sinds 4 MB...
 	private int lasttrack = Environment.TickCount;
 
 

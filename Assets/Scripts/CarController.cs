@@ -60,74 +60,96 @@ public class CarController : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate ()
 	{
-		if (Game.mode.Contains("driving"))
-		{
+		if (Game.mode.Contains ("driving")) {
 			// check surfaces
-			AdjustFriction(colliderFL, "FL");
-			AdjustFriction(colliderFR, "FR");
-			AdjustFriction(colliderRL, "RL");
-			AdjustFriction(colliderRR, "RR");
+			AdjustFriction (colliderFL, "FL");
+			AdjustFriction (colliderFR, "FR");
+			AdjustFriction (colliderRL, "RL");
+			AdjustFriction (colliderRR, "RR");
 
 			// check if car is on track
-			surfaceFL = CheckSurface(colliderFL);
-			surfaceFR = CheckSurface(colliderFR);
-			surfaceRL = CheckSurface(colliderRL);
-			surfaceRR = CheckSurface(colliderRR);
+			surfaceFL = CheckSurface (colliderFL);
+			surfaceFR = CheckSurface (colliderFR);
+			surfaceRL = CheckSurface (colliderRL);
+			surfaceRR = CheckSurface (colliderRR);
 			int chksm = 0;
-			if (surfaceFL == "off") { chksm += 1; }
-			if (surfaceFR == "off") { chksm += 1; }
-			if (surfaceRL == "off") { chksm += 1; }
-			if (surfaceRR == "off") { chksm += 1; }
-			if (chksm >= 3) { lapClean = false; }
+			if (surfaceFL == "off") {
+				chksm += 1;
+			}
+			if (surfaceFR == "off") {
+				chksm += 1;
+			}
+			if (surfaceRL == "off") {
+				chksm += 1;
+			}
+			if (surfaceRR == "off") {
+				chksm += 1;
+			}
+			if (chksm >= 3) {
+				lapClean = false;
+			}
 
 			// calculate velocity
 			deltaTime = Time.time - lastTime;
-			deltaPosition = Vector3.Distance(lastPosition,transform.position);
-			velocity = deltaPosition/deltaTime*3.6f;
+			deltaPosition = Vector3.Distance (lastPosition, transform.position);
+			velocity = deltaPosition / deltaTime * 3.6f;
 			lastPosition = transform.position;
 			lastTime = Time.time;
 	
 			// car control
-			steeringValue = Input.GetAxis("Horizontal");
-			if (pedalType == "digital")
-			{
-				throttlePedalValue = System.Convert.ToSingle(Input.GetKey(KeyCode.A));
-				brakePedalValue = System.Convert.ToSingle(Input.GetKey(KeyCode.Y));
+			if ((Game.mode.Contains ("keyboarddriving")) || (AiInt.HumanTakingControl)) {
+				steeringValue = Input.GetAxis ("Horizontal");
+				if (pedalType == "digital") {
+					throttlePedalValue = System.Convert.ToSingle (Input.GetKey (KeyCode.A));
+					brakePedalValue = System.Convert.ToSingle (Input.GetKey (KeyCode.Y));
+				} else {
+					throttlePedalValue = System.Convert.ToSingle (Input.GetAxis ("Vertical"));
+					if (throttlePedalValue < 0) {
+						throttlePedalValue = 0.0f;
+					}
+					brakePedalValue = -System.Convert.ToSingle (Input.GetAxis ("Vertical"));
+					if (brakePedalValue < 0) {
+						brakePedalValue = 0.0f;
+					}
+				}
+			} else if (((Game.mode.Contains ("drive_AI")) && !(Game.mode.Contains ("keyboarddriving")) && !(AiInt.HumanTakingControl) && (AiInt.AIDriving == true))) {
+				steeringValue = AiInt.nn_steer;
+				throttlePedalValue = AiInt.nn_throttle;
+				brakePedalValue = AiInt.nn_brake;
+			} else {
+				steeringValue = 0; 
+				throttlePedalValue = 0; 
+				brakePedalValue = 0;
 			}
-			else
-			{
-				throttlePedalValue = System.Convert.ToSingle(Input.GetAxis("Vertical"));
-				if (throttlePedalValue < 0) { throttlePedalValue = 0.0f; }
-				brakePedalValue = -System.Convert.ToSingle(Input.GetAxis("Vertical"));
-				if (brakePedalValue < 0) { brakePedalValue = 0.0f; }
-			}
 
-
-
-			if (AiInt.AITakingControl == false) { 
-				// accelerate
-                colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear;
-                colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
-				// brake
-				colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
-				colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
-				colliderRL.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
-				colliderRR.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f-BrakeBias);
-				// steer
-				colliderFL.steerAngle = maxSteer * steeringValue;
-				colliderFR.steerAngle = maxSteer * steeringValue;
-            }
-
+			colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear; 	 	
+			colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
+			// brake
+			colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
+			colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
+			colliderRL.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f - BrakeBias);
+			colliderRR.brakeTorque = maxBrakeTorque * brakePedalValue * (1.0f - BrakeBias);
+			// steer
+			colliderFL.steerAngle = maxSteer * steeringValue;
+			colliderFR.steerAngle = maxSteer * steeringValue;
 		}
+
 	}
+
+
+
+
 
 	void Update()
 	{
-
 		if (Game.mode.Contains("driving"))
 		{
 			// reverse gear
-			if (Input.GetKeyDown(KeyCode.R)) { gear *= -1.0f; }
+			if (Input.GetKeyDown(KeyCode.R)) {
+				if ((Game.mode.Contains("keyboarddriving")) || (AiInt.HumanTakingControl)) {
+					gear *= -1.0f; 
+				}
+			}
 	
 			// wheels rotation
 			transformFL.Rotate(colliderFL.rpm/60*360*Time.deltaTime,0,0);
@@ -179,6 +201,29 @@ public class CarController : MonoBehaviour {
 
 		// pause & exit to menu
 		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
+
+
+		// reconnect to server
+		if (Input.GetKeyDown(KeyCode.C)) {   
+			if (Game.mode.Contains("drive_AI")) {
+				AiInt.Reconnect(); 
+			}
+		}
+
+		// disconnect from server
+		if (Input.GetKeyDown (KeyCode.D)) { 
+			if (Game.mode.Contains ("drive_AI")) {
+				AiInt.Disconnect (); 
+			}
+		}
+
+		//human taking control over AI
+		if (Input.GetKeyDown (KeyCode.H)) { 
+			if (Game.mode.Contains ("drive_AI")) {
+				AiInt.FlipHumanTakingControl();
+				Game.UserInterface.UpdateGameModeDisp ();
+			}
+		}
 	}
 
 	public void ResetCar() {
@@ -190,6 +235,7 @@ public class CarController : MonoBehaviour {
 		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
 		//TODO: sicher dass ich nichts kaputt mache durch das lap-clean-enforcen?
 		//TODO: das was hier passiert reicht noch nicht, sonst wuerde ich nicht nach vorne rollen.
+		//gibts außer velocity noch momentum? (möglicherweise von den einzelnen reifen?)
 
 		// reset the car & kill innertia
 		Car.transform.position = Position;
@@ -199,7 +245,7 @@ public class CarController : MonoBehaviour {
 		
 		// reset wheel torques and steering angles instantly
 		colliderRL.motorTorque = 0.0f;
-		colliderRR.motorTorque = 0.0f;
+		colliderRR.motorTorque = 0.0f; //torque/kraft != drehung evtl, drehungsmomentum
 		colliderFL.brakeTorque = 0.0f;
 		colliderFR.brakeTorque = 0.0f;
 		colliderRL.brakeTorque = 0.0f;

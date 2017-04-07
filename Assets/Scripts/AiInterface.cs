@@ -14,7 +14,7 @@ public static class Consts {
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 100;
 	public const int lookforpythonintervalms = 100;
-	public const int MAXAGEPYTHONRESULT = 150;
+	public const int MAXAGEPYTHONRESULT = 300;
 	public const int CREATE_VECS_ALL = 50;       //TODO: these need to scale up with the game speed!
 
 	public const int visiondisplay_x = 30; //30
@@ -44,8 +44,6 @@ public class AiInterface : MonoBehaviour {
 	public WheelCollider colliderFL;
 	public WheelCollider colliderFR;
 
-	public bool AITakingControl;
-
 	public PositionTracking Tracking;
 	public CarController Car;
 	public MinimapScript Minmap;
@@ -63,25 +61,42 @@ public class AiInterface : MonoBehaviour {
 	public long lastgetvectortime = Environment.TickCount;
 	public string lastpythonsent;
 
+	public float nn_steer = 0;
+	public float nn_brake = 0;
+	public float nn_throttle = 0;
+	public bool AIDriving = false;
+	public bool HumanTakingControl = false;
+
 
 	//=============================================================================
 
 	// Use this for initialization
 	void Start () {
-		if (Game.mode.Contains ("train_AI")) {
+		if (Game.mode.Contains ("drive_AI")) {
 			SendToPython ("resetannvals", true);
 		}
 	}
 
 	// Update is called once per frame
 	void Update () {
-		if (Game.mode.Contains ("train_AI")) {
+		if (Game.mode.Contains ("drive_AI")) {
 			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
 		}
 	}
 
+	public void FlipHumanTakingControl(bool force_overwrite = false, bool overwrite_with = false) {
+		if (!force_overwrite) {
+			HumanTakingControl = !HumanTakingControl;
+		} else {
+			HumanTakingControl = overwrite_with;
+		}
+		AsynchronousClient.response.str = "";
+
+	}
+
+
 	void FixedUpdate() {
-		if (Game.mode.Contains("train_AI")) {
+		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
 				
 //			Stopwatch stopwatch = new Stopwatch();
 //			stopwatch.Reset();
@@ -90,21 +105,25 @@ public class AiInterface : MonoBehaviour {
 			SendToPython (load_infos (false, true), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.
 			AskForPython(); //Da diese funktion asynchron ist, gibts keinen returnwert, nur sooner or later geupdatete values.
 
-			if (Environment.TickCount - AsynchronousClient.response.timestamp > Consts.MAXAGEPYTHONRESULT) {
+			if (Environment.TickCount - AsynchronousClient.response.timestamp < Consts.MAXAGEPYTHONRESULT) {
 				
 				string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
 //				stopwatch.Stop();
 				if (message == "pleasereset") {
-					AITakingControl = false; //TODO: diese AITakingControl muss im CarController eindeutiger und starker sein
 					Car.ResetCar ();
-				} else if (message == "turning") {
-					AITakingControl = true;
-					colliderRL.motorTorque = 1200.0f;
-					colliderRR.motorTorque = 1200.0f;
-					UnityEngine.Debug.Log ("Turning means Speeding"); // + "   mS: " + stopwatch.ElapsedMilliseconds);
+					AIDriving = false;
+				} else if ((message.Length > 0) && (message [0] == '[')) {
+					message = message.Substring (1, message.Length - 2);
+					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
+					nn_throttle = controls [0];
+					nn_brake = controls [1];
+					nn_steer = controls [2];
+					AIDriving = true;
 				} else {
-					AITakingControl = false;
+					AIDriving = false;
 				}
+			} else {
+				AIDriving = false;
 			}
 		}
 	}
@@ -161,9 +180,9 @@ public class AiInterface : MonoBehaviour {
 
 		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		all += "C"+ string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all += "C("+ string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		all += "L"+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		all += "V(" + TwoDArrayToStr (Minmap.GetVisionDisplay ()) + ")";
 
@@ -406,6 +425,15 @@ public class AiInterface : MonoBehaviour {
 		}	
 	}
 
+	public void Reconnect() {
+		AsynchronousClient.serverdown = false;
+		AsynchronousClient.ResetServerConnectTrials();
+	}
+
+	public void Disconnect() {
+		AsynchronousClient.serverdown = true;
+		AIDriving = false;
+	}
 
 
 

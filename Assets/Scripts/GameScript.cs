@@ -46,11 +46,11 @@ public class GameScript : MonoBehaviour {
 
 		//TODO: diese 3 Zeilen müssen früher oder später weg.
 		if (newMode == "driving") {
-			mode = new string[3]{ "driving", "train_AI", "drive_AI" };  
+			mode = new string[4]{ "driving", "train_AI", "drive_AI", "keyboarddriving" };  
 		} else
 
 		if (newMode == "train_AI") {
-			mode = new string[2]{ "driving", "train_AI" };
+			mode = new string[3]{ "driving", "train_AI", "keyboarddriving" };
 		} else if (newMode == "drive_AI") {
 			mode = new string[2]{ "driving", "drive_AI" };
 		} else 	{
@@ -66,6 +66,7 @@ public class GameScript : MonoBehaviour {
 		OverviewCamera.SetActive (false);
 		Car.ResetCar ();
 		Timing.ResetTiming ();
+		UserInterface.UpdateGameModeDisp ();
 		//Rec.ResetLap() ist überflüssig
 
 
@@ -89,5 +90,17 @@ public class GameScript : MonoBehaviour {
 		} 
 
 	}
+
+	public string UpdateGameModeDisplay() {
+		string modetxt = "";
+		foreach (string curr in mode) {
+			modetxt += curr + " ";
+		}	
+		if (AiInt.HumanTakingControl) {
+			modetxt += "(Human Intervention)";
+		}
+		return modetxt;
+	}
+
 
 }

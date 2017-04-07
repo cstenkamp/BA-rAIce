@@ -20,6 +20,7 @@ public class UIScript : MonoBehaviour {
 	public Recorder Rec;
 	public Text Speedometer;
 	public Text GearDisplay;
+	public Text DriveModeDisplay;
 	public Text CurrentLaptime;
 	public Text LastLaptime;
 	public Text FastestLaptime;
@@ -140,7 +141,7 @@ public class UIScript : MonoBehaviour {
 
 		if (Game.mode.Contains("menu") && drivingOverlayActive == true) {  //TODO: wenn es ein anderes Pausenmenü gibt: das hier splitten.
 			UiBgTop.SetActive(false); UiBgBottom.SetActive(false); UiFeedbackBg.SetActive(false); UiSteering.SetActive(false); 
-			UiThrottle.SetActive(false); UiBrake.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; 
+			UiThrottle.SetActive(false); UiBrake.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; DriveModeDisplay.enabled = false;
 			FSlipFL.enabled=false; FSlipFR.enabled=false; FSlipRL.enabled=false; FSlipRR.enabled=false; SSlipFL.enabled=false; SSlipFR.enabled=false; 
 			SSlipRL.enabled=false; SSlipRR.enabled=false; FSlipHeadline.enabled=false; SSlipHeadline.enabled=false; GearDisplay.enabled=false; 
 			CurrentLaptime.enabled=false; Delta.enabled=false; LastLaptime.enabled=false; FastestLaptime.enabled=false; Progress.enabled=false; 
@@ -155,7 +156,7 @@ public class UIScript : MonoBehaviour {
 
 		if (Game.mode.Contains("driving") && drivingOverlayActive == false) { 
 			UiBgTop.SetActive(true); UiBgBottom.SetActive(true); UiFeedbackBg.SetActive(true); UiSteering.SetActive(true); UiThrottle.SetActive(true); UiBrake.SetActive(true); 
-			Speedometer.enabled=true;  FSlipFL.enabled=true; FSlipFR.enabled=true; FSlipRL.enabled=true; FSlipRR.enabled=true; SSlipFL.enabled=true; 
+			Speedometer.enabled=true;  FSlipFL.enabled=true; FSlipFR.enabled=true; FSlipRL.enabled=true; FSlipRR.enabled=true; SSlipFL.enabled=true; DriveModeDisplay.enabled = true;
 			SSlipFR.enabled=true; SSlipRL.enabled=true; SSlipRR.enabled=true; FSlipHeadline.enabled=true; SSlipHeadline.enabled=true; GearDisplay.enabled=true; 
 			CurrentLaptime.enabled=true; Delta.enabled=true; LastLaptime.enabled=true; FastestLaptime.enabled=true; Progress.enabled=true; LapCount.enabled=true; drivingOverlayActive=true;
 		}
@@ -308,6 +309,10 @@ public class UIScript : MonoBehaviour {
 				DistanceCell_10.rectTransform.position = new Vector3 (DistanceCell_10.transform.position.x, UiCenterDistanceVectorBg.transform.position.y + centerDistanceVector [0] * 100.0f - 18.0f, DistanceCell_10.rectTransform.position.z);
 			}
 		}
+	}
+
+	public void UpdateGameModeDisp() {
+		DriveModeDisplay.text = Game.UpdateGameModeDisplay ();
 	}
 
 	void MenuOverlayHandling()
