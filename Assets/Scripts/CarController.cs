@@ -219,7 +219,7 @@ public class CarController : MonoBehaviour {
 
 		//human taking control over AI
 		if (Input.GetKeyDown (KeyCode.H)) { 
-			if (Game.mode.Contains ("drive_AI")) {
+			if ((Game.mode.Contains ("drive_AI")) && (!Game.mode.Contains ("keyboarddriving"))) {
 				AiInt.FlipHumanTakingControl();
 				Game.UserInterface.UpdateGameModeDisp ();
 			}
