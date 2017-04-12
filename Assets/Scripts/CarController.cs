@@ -25,6 +25,7 @@ public class CarController : MonoBehaviour {
 	public Transform transformRR;
 
 	public bool lapClean;
+	public bool justrespawned = false;
 	string surfaceFL;
 	string surfaceFR;
 	string surfaceRL;
@@ -61,6 +62,18 @@ public class CarController : MonoBehaviour {
 	void FixedUpdate ()
 	{
 		if (Game.mode.Contains ("driving")) {
+
+			if (justrespawned) { //http://answers.unity3d.com/questions/35066/remove-all-forces-on-a-wheel-collider.html
+				colliderFL.brakeTorque = Mathf.Infinity;
+				colliderFR.brakeTorque = Mathf.Infinity;
+				colliderRL.brakeTorque = Mathf.Infinity;
+				colliderRR.brakeTorque = Mathf.Infinity;
+				Car.isKinematic = true;
+				justrespawned = false;
+				return;
+			} 
+			Car.isKinematic = false;
+
 			// check surfaces
 			AdjustFriction (colliderFL, "FL");
 			AdjustFriction (colliderFR, "FR");
@@ -242,16 +255,21 @@ public class CarController : MonoBehaviour {
 		Car.transform.rotation = Rotation;
 		Car.velocity = Vector3.zero;
 	    Car.angularVelocity = Vector3.zero;
-		
+		Car.angularDrag = 0.0f;
+		Car.drag = 0.0f;
+		Car.ResetInertiaTensor();
+
 		// reset wheel torques and steering angles instantly
 		colliderRL.motorTorque = 0.0f;
 		colliderRR.motorTorque = 0.0f; //torque/kraft != drehung evtl, drehungsmomentum
-		colliderFL.brakeTorque = 0.0f;
-		colliderFR.brakeTorque = 0.0f;
-		colliderRL.brakeTorque = 0.0f;
-		colliderRR.brakeTorque = 0.0f;
+		colliderFL.brakeTorque = Mathf.Infinity;
+		colliderFR.brakeTorque = Mathf.Infinity;
+		colliderRL.brakeTorque = Mathf.Infinity;
+		colliderRR.brakeTorque = Mathf.Infinity;
 		colliderFL.steerAngle = 0.0f;
 		colliderFR.steerAngle = 0.0f;
+		justrespawned = true;
+
 
 		// send to python that stuff changed
 		AiInt.SendToPython ("reset", true);

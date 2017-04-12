@@ -14,7 +14,7 @@ public static class Consts {
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 100;
 	public const int lookforpythonintervalms = 100;
-	public const int MAXAGEPYTHONRESULT = 300;
+	public const int MAXAGEPYTHONRESULT = 350;
 	public const int CREATE_VECS_ALL = 50;       //TODO: these need to scale up with the game speed!
 
 	public const int visiondisplay_x = 30; //30

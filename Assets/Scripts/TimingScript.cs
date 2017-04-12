@@ -33,7 +33,7 @@ public class TimingScript : MonoBehaviour {
 	{
 		if (activeLap)
 		{
-			currentLapTime = Time.time - currentLapStart + time_punishs;
+			currentLapTime = (Time.time - currentLapStart) + time_punishs;
 		}
 	}
 
@@ -43,7 +43,7 @@ public class TimingScript : MonoBehaviour {
 		// last lap time & fastest lap time update 
 		if (activeLap && ccPassed && Car.lapClean)  //ccpassed heißt dass er schon durch den zweiten collider ist, lapclean heißt 1 reifen auf straße... activelap ist true sobald man den trigger entered (was dank CarControllerSkript nur im game-modus geht)
 		{                                           //also, im grunde kommt man hier schon rein wenn man eine valide, ungecheatete, komplette runde gefahren ist.
-			lastLapTime = Time.time - currentLapStart;
+			lastLapTime = Time.time - currentLapStart + time_punishs;
 			timeSet = true;
 			if (!fastLapSet || (timeSet && lastLapTime < fastestLapTime)) //wenn diese die erste oder letzte runde ist
 			{
@@ -75,6 +75,7 @@ public class TimingScript : MonoBehaviour {
 	{
 		currentLapTime = 0.0f;
 		activeLap = false;
+		time_punishs = 0;
 	}
 
 	// Reset Session Script
@@ -84,6 +85,7 @@ public class TimingScript : MonoBehaviour {
 		currentLapTime = 0.0f;
 		timeSet = false;
 		activeLap = false;
+		time_punishs = 0;
 	}
 
 	public void FlipCcPassed()

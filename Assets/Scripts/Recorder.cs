@@ -85,7 +85,7 @@ public class Recorder : MonoBehaviour {
 	//FinishList wird im TimingScript ausgeführt, bei Triggerkollision mit dem Start/Ziel-Trigger, und zwar nur wenn activeLap && ccPassed && Car.lapClean
 	public void FinishList()
 	{
-		thisLap.Add(new PointInTime(Timing.lastLapTime, 1.0f));
+		thisLap.Add(new PointInTime(Timing.currentLapTime, 1.0f));
 		lastLap = thisLap;
 		if (Timing.lastLapTime == Timing.fastestLapTime)
 		{
