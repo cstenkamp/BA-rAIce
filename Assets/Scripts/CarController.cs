@@ -226,7 +226,7 @@ public class CarController : MonoBehaviour {
 		// disconnect from server
 		if (Input.GetKeyDown (KeyCode.D)) { 
 			if (Game.mode.Contains ("drive_AI")) {
-				AiInt.Disconnect (); 
+				AiInt.Disconnect(); 
 			}
 		}
 
@@ -247,8 +247,6 @@ public class CarController : MonoBehaviour {
 	{
 		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
 		//TODO: sicher dass ich nichts kaputt mache durch das lap-clean-enforcen?
-		//TODO: das was hier passiert reicht noch nicht, sonst wuerde ich nicht nach vorne rollen.
-		//gibts außer velocity noch momentum? (möglicherweise von den einzelnen reifen?)
 
 		// reset the car & kill innertia
 		Car.transform.position = Position;
@@ -261,14 +259,14 @@ public class CarController : MonoBehaviour {
 
 		// reset wheel torques and steering angles instantly
 		colliderRL.motorTorque = 0.0f;
-		colliderRR.motorTorque = 0.0f; //torque/kraft != drehung evtl, drehungsmomentum
+		colliderRR.motorTorque = 0.0f; 
 		colliderFL.brakeTorque = Mathf.Infinity;
 		colliderFR.brakeTorque = Mathf.Infinity;
 		colliderRL.brakeTorque = Mathf.Infinity;
 		colliderRR.brakeTorque = Mathf.Infinity;
 		colliderFL.steerAngle = 0.0f;
 		colliderFR.steerAngle = 0.0f;
-		justrespawned = true;
+		justrespawned = true; //der teil ist wichtig!
 
 
 		// send to python that stuff changed

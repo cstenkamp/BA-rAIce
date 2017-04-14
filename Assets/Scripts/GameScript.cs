@@ -46,7 +46,7 @@ public class GameScript : MonoBehaviour {
 
 		//TODO: diese 3 Zeilen müssen früher oder später weg.
 		if (newMode == "driving") {
-			mode = new string[4]{ "driving", "train_AI", "drive_AI", "keyboarddriving" };  
+			mode = new string[3]{ "driving", "train_AI", "keyboarddriving" };  
 		} else
 
 		if (newMode == "train_AI") {

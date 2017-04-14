@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 
 
-public static class Consts {
+public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 100;
@@ -36,7 +36,6 @@ public class AiInterface : MonoBehaviour {
 	//these are only active in the "train AI" mode
 	public bool sent_to_python = true;
 	public bool get_from_python = true;
-
 
 
 	public WheelCollider colliderRL;
@@ -109,12 +108,12 @@ public class AiInterface : MonoBehaviour {
 				
 				string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
 //				stopwatch.Stop();
-				if (message == "pleasereset") {
+				if (message == "pleasereset") { //TODO: ich glaube das hier klappt nicht mehr
 					Car.ResetCar ();
 					AIDriving = false;
 				} else if ((message.Length > 0) && (message [0] == '[')) {
 					message = message.Substring (1, message.Length - 2);
-					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
+					float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
 					nn_throttle = controls [0];
 					nn_brake = controls [1];
 					nn_steer = controls [2];
@@ -209,34 +208,6 @@ public class AiInterface : MonoBehaviour {
 		colliderFL.steerAngle = SpeedStearVec [2];
 		colliderFR.steerAngle = SpeedStearVec [3];
 	}
-
-
-
-	//ALTE FUNKTION FURS VISIONDISPLAY
-//  public float posStepSize = 1.5f;
-//	// return NxM float array representing a top-view grid, indicating track surface as 1 and offtrack as 0
-//	public float[,] GetVisionDisplay() {
-//		float[,] visArray = new float[visiondisplay_x,visiondisplay_y];
-//		Vector3 carPos = Car.transform.position;
-//		float carRot = Car.transform.eulerAngles.y - 180.0f;
-//		for (int i=0; i<visiondisplay_x; i++)
-//		{
-//			for (int j=0; j<visiondisplay_y; j++)
-//			{
-//				float xPosDot = (i-(float)visiondisplay_x/2.0f)*posStepSize;
-//				float zPosDot = -(j+3)*posStepSize;
-//				float X = carPos.x - xPosDot*Mathf.Cos(carRot*Mathf.PI/180.0f) + Mathf.Sin(carRot*Mathf.PI/180.0f)*zPosDot;
-//				float Z = carPos.z + xPosDot*Mathf.Sin(carRot*Mathf.PI/180.0f) + Mathf.Cos(carRot*Mathf.PI/180.0f)*zPosDot;
-//				visArray[i,j] = Car.CheckSurface(X,Z);
-//				// debug
-////								if (i==0 && j==0) { posMarker1.transform.position = new Vector3(X,1.5f,Z); }
-////								if (i==0 && j==visiondisplay_y-1) { posMarker2.transform.position = new Vector3(X,1.5f,Z); }
-////								if (i==visiondisplay_x-1 && j==visiondisplay_y-1) { posMarker3.transform.position = new Vector3(X,1.5f,Z); }
-////								if (i==visiondisplay_x-1 && j==0) { posMarker4.transform.position = new Vector3(X,1.5f,Z); }
-//			}
-//		}
-//		return visArray;
-//	}
 
 
 

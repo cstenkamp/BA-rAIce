@@ -55,7 +55,7 @@ public class Recorder : MonoBehaviour {
 	// dieses reinforcement-learning-target kann ab der zweiten validen runde die differenz zur ersten runde sein...? Dann würde man am Ende die erste runde mit überall positive infinity definitiv
 	//   ...rausnehmen müssen da das das learning kaputt macht... Der Nachteil der Methode ist dass nen Target von 0 immer noch sehr gut sein kann... und RL das nicht checkt.
 	// Alternative dazu wäre dass man immer die differenz zu ner baseline-runde nimmt. Dann würde der vielleicht individuell wissen welche er beschleunigen kann und welche nicht...
-	// Dritte Alternative (die momentane Standard-Q-Learn-Procedure) ist dass man halt immer nur die finale Runde zählt, aber da das millions of frames apart ist wäre der Gradient definitiv = 0.
+	// Dritte Alternative (die momentane Standard-Q-Learn-Procedure) ist dass man halt immer nur die finale Runde zählt, aber da das hundreds of frames apart ist wäre der Gradient definitiv = 0.
 
 	public void StartList()
 	{
