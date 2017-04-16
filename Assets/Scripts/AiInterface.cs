@@ -34,7 +34,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 public class AiInterface : MonoBehaviour {
 
 	//these are only active in the "train AI" mode
-	public bool sent_to_python = true;
+	public bool send_to_python = true;
 	public bool get_from_python = true;
 
 
@@ -71,14 +71,14 @@ public class AiInterface : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		if (Game.mode.Contains ("drive_AI")) {
+		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			SendToPython ("resetannvals", true);
 		}
 	}
 
 	// Update is called once per frame
 	void Update () {
-		if (Game.mode.Contains ("drive_AI")) {
+		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
 		}
 	}
@@ -103,6 +103,8 @@ public class AiInterface : MonoBehaviour {
 
 			SendToPython (load_infos (false, true), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.
 			AskForPython(); //Da diese funktion asynchron ist, gibts keinen returnwert, nur sooner or later geupdatete values.
+
+			UnityEngine.Debug.Log ((Environment.TickCount - AsynchronousClient.response.timestamp).ToString ()); //das hier sagt überhaupt gar nix.
 
 			if (Environment.TickCount - AsynchronousClient.response.timestamp < Consts.MAXAGEPYTHONRESULT) {
 				
@@ -368,7 +370,7 @@ public class AiInterface : MonoBehaviour {
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls AsynchronousClient's StartSenderClient
 	public void SendToPython(string data, Boolean force) {
-		if (!sent_to_python) {	return;	}
+		if (!send_to_python) {	return;	}
 		int currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
 			var t = new Thread(() => AsynchronousClient.StartSenderClient(data));

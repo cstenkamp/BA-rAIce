@@ -5,6 +5,7 @@ using System;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Threading;
+using System.Linq;
 
 //TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
 //     resetten soll und alle keys nochmal genauso drücken soll
@@ -62,9 +63,9 @@ public class Recorder : MonoBehaviour {
 		thisLap = new List<PointInTime>();
 		thisLap.Add(new PointInTime(0.0f, 0.0f));
 
-		if (sv_save_round) {
+		if (sv_save_round) { 
 			SVLearnLap = new List<TrackingPoint> ();
-			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, AiInt.load_infos(false,true))); 
+			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, AiInt.load_infos(false,true), (int) Mathf.Round(Car.velocity))); 
 		}
 	}
 
@@ -78,7 +79,7 @@ public class Recorder : MonoBehaviour {
 	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
 	public void SVLearnUpdateList(){
 		if (sv_save_round) {
-			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, AiInt.load_infos(false,true)));
+			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, AiInt.load_infos(false,true), (int) Mathf.Round(Car.velocity)));
 		}
 	}
 
@@ -94,8 +95,14 @@ public class Recorder : MonoBehaviour {
 		}
 
 		if (sv_save_round) {
-			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, AiInt.load_infos (false, true)));
-			SaveSVLearnLapStart (SVLearnLap, "complete_" + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss")); 
+			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, AiInt.load_infos (false, true), (int) Mathf.Round(Car.velocity)));
+			string whodrove;
+			if (Car.Game.mode.Contains ("keyboarddriving")) {
+				whodrove = "_human";
+			} else {
+				whodrove = "_AI";
+			}
+			SaveSVLearnLapStart (SVLearnLap, "complete_" + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__"  + Math.Round((Timing.lastLapTime*10)).ToString() + whodrove); 
 		}
 	}
 
@@ -226,15 +233,17 @@ public class TrackingPoint
 	public float steeringValue;
 	public float progress;
 	public string vectors;
+	public int speed;
 
 	// constructors
 	public TrackingPoint(){}
-	public TrackingPoint(float newtime, float newthrottlePedalValue, float newbrakePedalValue, float newsteeringValue, float newprogress, string newvectors) { 
+	public TrackingPoint(float newtime, float newthrottlePedalValue, float newbrakePedalValue, float newsteeringValue, float newprogress, string newvectors, int newspeed) { 
 		time = newtime;
 		throttlePedalValue = newthrottlePedalValue; 
 		brakePedalValue = newbrakePedalValue; 
 		steeringValue = newsteeringValue; 
 		progress = newprogress;
+		speed = newspeed;
 		vectors = newvectors;
 	}
 }

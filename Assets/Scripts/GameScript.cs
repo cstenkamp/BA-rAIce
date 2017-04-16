@@ -57,7 +57,7 @@ public class GameScript : MonoBehaviour {
 			mode = new string[1]{newMode};
 		}
 
-		AiInt.sent_to_python = false;
+		AiInt.send_to_python = false;
 		AiInt.get_from_python = false;
 		AsynchronousClient.serverdown = true;
 		Recorder.sv_save_round = false;
@@ -84,7 +84,7 @@ public class GameScript : MonoBehaviour {
 		} 
 
 		if (mode.Contains("drive_AI")) {
-			AiInt.sent_to_python = true;
+			AiInt.send_to_python = true;
 			AiInt.get_from_python = true;
 			AsynchronousClient.serverdown = false; 
 		} 

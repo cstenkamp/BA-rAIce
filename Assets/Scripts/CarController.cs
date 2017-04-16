@@ -270,7 +270,7 @@ public class CarController : MonoBehaviour {
 
 
 		// send to python that stuff changed
-		AiInt.SendToPython ("reset", true);
+		AiInt.SendToPython ("resetannvals", true);
 
 		if (make_valid && Timing.lapCount > 0)
 			lapClean = true;

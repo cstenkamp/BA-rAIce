@@ -53,7 +53,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
 			if (connectDone.WaitOne(WAITFORSERVER)) {  //try to connect, if it doesn't work, the server seems down and you don't continue.
 				Send(client,preparestring(data));  
-				sendDone.WaitOne();  
+				sendDone.WaitOne(WAITFORSERVER*50);  
 
 				client.Shutdown(SocketShutdown.Send);  
 				client.Close();  
@@ -87,7 +87,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
 			if (connectDone.WaitOne(WAITFORSERVER)) { //try to connect, if it doesn't work, the server seems down and you don't continue.
 				Receive(client);  //das ganze ist ja asynchron, das heißt Receive kann nix returnen sondern nur den value updaten.. was aber ja sogar gewünscht ist!
-				receiveDone.WaitOne();  
+				receiveDone.WaitOne(WAITFORSERVER*50);  
 
 				client.Shutdown(SocketShutdown.Send);  
 				client.Close();  
