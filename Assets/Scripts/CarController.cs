@@ -219,6 +219,7 @@ public class CarController : MonoBehaviour {
 		// reconnect to server
 		if (Input.GetKeyDown(KeyCode.C)) {   
 			if (Game.mode.Contains("drive_AI")) {
+				UnityEngine.Debug.Log ("Connecting...");
 				AiInt.Reconnect(); 
 			}
 		}
@@ -226,6 +227,7 @@ public class CarController : MonoBehaviour {
 		// disconnect from server
 		if (Input.GetKeyDown (KeyCode.D)) { 
 			if (Game.mode.Contains ("drive_AI")) {
+				UnityEngine.Debug.Log ("Disconnecting...");
 				AiInt.Disconnect(); 
 			}
 		}
@@ -270,7 +272,7 @@ public class CarController : MonoBehaviour {
 
 
 		// send to python that stuff changed
-		AiInt.SendToPython ("resetannvals", true);
+		AiInt.SendToPython ("resetServer", true);
 
 		if (make_valid && Timing.lapCount > 0)
 			lapClean = true;

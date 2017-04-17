@@ -87,7 +87,9 @@ public class GameScript : MonoBehaviour {
 			AiInt.send_to_python = true;
 			AiInt.get_from_python = true;
 			AsynchronousClient.serverdown = false; 
+			AiInt.StartedAIMode ();
 		} 
+			
 
 	}
 
