@@ -219,7 +219,6 @@ public class CarController : MonoBehaviour {
 		// reconnect to server
 		if (Input.GetKeyDown(KeyCode.C)) {   
 			if (Game.mode.Contains("drive_AI")) {
-				UnityEngine.Debug.Log ("Connecting...");
 				AiInt.Reconnect(); 
 			}
 		}
@@ -227,7 +226,6 @@ public class CarController : MonoBehaviour {
 		// disconnect from server
 		if (Input.GetKeyDown (KeyCode.D)) { 
 			if (Game.mode.Contains ("drive_AI")) {
-				UnityEngine.Debug.Log ("Disconnecting...");
 				AiInt.Disconnect(); 
 			}
 		}

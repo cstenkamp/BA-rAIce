@@ -12,10 +12,10 @@ using System.Linq;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 100;
-	public const int lookforpythonintervalms = 100;
+	public const int updatepythonintervalms = 500; //25;
+	public const int lookforpythonintervalms = 100; //TODO: das hier wird ersetzt!!
 	public const int MAXAGEPYTHONRESULT = 350;
-	public const int CREATE_VECS_ALL = 50;       //TODO: these need to scale up with the game speed!
+	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 42; //42
@@ -387,8 +387,10 @@ public class AiInterface : MonoBehaviour {
 		if (!send_to_python) {	return;	}
 		if (data == "resetServer") {
 			AsynchronousClient.StartClientSocket (Consts.PORTSEND);
+			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
+		} else {
+			data = "Time(" + Environment.TickCount.ToString () + ")" + data;
 		}
-		data = "Time("+Environment.TickCount.ToString () + ")" + data;
 
 		int currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
@@ -396,6 +398,10 @@ public class AiInterface : MonoBehaviour {
 			t.Start();
 			lastpythonupdate = currtime;
 		}
+	}
+
+	public void ConnectAsReceiver() {
+		AsynchronousClient.StartClientSocket (Consts.PORTASK);
 	}
 
 	public void AskForPython() { //asynchron, daher keinen string message returnen!
@@ -418,13 +424,19 @@ public class AiInterface : MonoBehaviour {
 	}
 
 	public void Reconnect() {
+		UnityEngine.Debug.Log ("Connecting...");
 		AsynchronousClient.serverdown = false;
 		AsynchronousClient.ResetServerConnectTrials();
+		SendToPython ("resetServer", true);
 	}
 
 	public void Disconnect() {
-		AsynchronousClient.serverdown = true;
-		AIDriving = false;
+		if (!AsynchronousClient.serverdown) {
+			UnityEngine.Debug.Log ("Disconnecting...");
+			AsynchronousClient.StopSenderClient ();
+			AsynchronousClient.serverdown = true;
+			AIDriving = false;
+		}
 	}
 
 

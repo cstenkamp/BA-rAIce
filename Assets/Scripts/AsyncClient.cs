@@ -88,7 +88,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			return;
 		serverconnecttrials += 1;
 		if (serverconnecttrials > MAXCONNECTTRIALS) {
-			UnityEngine.Debug.Log ("too many trials");
+			UnityEngine.Debug.Log ("Stopping to try to Connect to Server. Once you set up a server, press [C].");
 			serverdown = true;
 		}
 	}
