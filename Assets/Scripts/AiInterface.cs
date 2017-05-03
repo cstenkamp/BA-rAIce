@@ -16,6 +16,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int lookforpythonintervalms = 100; //TODO: das hier wird ersetzt!!
 	public const int MAXAGEPYTHONRESULT = 350;
 	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
+	public const bool UPDATE_ONLY_IF_NEW = false; //assert dass die gleich der von python ist
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 42; //42
@@ -26,7 +27,6 @@ public static class Consts { //TODO: diese hier an python schicken!
 
 	public const bool wallhit_means_reset = true;
 }
-
 
 //================================================================================
 
@@ -56,7 +56,7 @@ public class AiInterface : MonoBehaviour {
 
 	//for sending to python
 	public long lastpythonupdate =  Environment.TickCount;
-	public long lastpythoncheck =  Environment.TickCount;
+	public long lastpythonresult =  Environment.TickCount;
 	public long lastgetvectortime = Environment.TickCount;
 	public string lastpythonsent;
 
@@ -66,6 +66,8 @@ public class AiInterface : MonoBehaviour {
 	public bool AIDriving = false;
 	public bool HumanTakingControl = false;
 
+	public AsynchronousClient SenderClient   = new AsynchronousClient(true);
+	public AsynchronousClient ReceiverClient = new AsynchronousClient(false);
 
 	//=============================================================================
 
@@ -74,28 +76,26 @@ public class AiInterface : MonoBehaviour {
 		StartedAIMode ();
 	}
 
+
 	public void StartedAIMode() {
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
+			lastpythonupdate =  Environment.TickCount;
+			lastpythonresult =  Environment.TickCount; //keinen schimmer warum es nicht reicht sie oben außerhalb von function zu setten.
+			lastgetvectortime = Environment.TickCount;	
+			UnityEngine.Debug.Log ("Started AI Mode");
 			SendToPython ("resetServer", true);
+			ConnectAsReceiver ();
 		}
 	}
 
 
-	// Update is called once per frame
+	// Update is called once per frame, and doesn't let the actual game wait
 	void Update () {
-
-		if (Input.GetKeyDown (KeyCode.S)) {  
-			AsynchronousClient.SendAufJedenFall ("asdf");
-		}
-
-		if (Input.GetKeyDown (KeyCode.E)) {  
-			AsynchronousClient.StopSenderClient ();
-		}
-
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
 		}
 	}
+
 
 	public void FlipHumanTakingControl(bool force_overwrite = false, bool overwrite_with = false) {
 		if (!force_overwrite) {
@@ -103,7 +103,7 @@ public class AiInterface : MonoBehaviour {
 		} else {
 			HumanTakingControl = overwrite_with;
 		}
-		AsynchronousClient.response.str = "";
+		ReceiverClient.response.pedals = ""; 
 
 	}
 
@@ -114,17 +114,16 @@ public class AiInterface : MonoBehaviour {
 //			Stopwatch stopwatch = new Stopwatch();
 //			stopwatch.Reset();
 //			stopwatch.Start();
-
-			SendToPython (load_infos (false, true), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.
+			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.   (-> wenn ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
 			AskForPython(); //Da diese funktion asynchron ist, gibts keinen returnwert, nur sooner or later geupdatete values.
 
-//			UnityEngine.Debug.Log ((Environment.TickCount - AsynchronousClient.response.timestamp).ToString ()); //das hier sagt überhaupt gar nix.
+			//			UnityEngine.Debug.Log ((Environment.TickCount - SenderClient.response.timestamp).ToString ()); //das hier sagt überhaupt gar nix.
 
-			if (Environment.TickCount - AsynchronousClient.response.timestamp < Consts.MAXAGEPYTHONRESULT) {
+			if (Environment.TickCount - ReceiverClient.response.timestampReceive < Consts.MAXAGEPYTHONRESULT) {
 				
-				string message = AsynchronousClient.response.str; //ich würde ja sagen message = Askforpython, aber asynchronität undso!
-//				stopwatch.Stop();
-				if (message == "pleasereset") { //TODO: ich glaube das hier klappt nicht mehr
+				string message = ReceiverClient.response.pedals; 
+
+				if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { //TODO: ich glaube das hier klappt nicht mehr
 					Car.ResetCar ();
 					AIDriving = false;
 				} else if ((message.Length > 0) && (message [0] == '[')) {
@@ -145,11 +144,12 @@ public class AiInterface : MonoBehaviour {
 
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		int currtime = Environment.TickCount;
+		long currtime = Environment.TickCount;
+
 		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 			lastpythonsent = GetAllInfos ();
 			lastgetvectortime = currtime;
-		}
+		} 
 //		if (!Car.lapClean)
 //			tosend = "invalidround";
 		return lastpythonsent;
@@ -382,35 +382,42 @@ public class AiInterface : MonoBehaviour {
 
 
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
-	// send, and if so, calls AsynchronousClient's StartSenderClient
+	// send, and if so, calls SenderClient's StartSenderClient
 	public void SendToPython(string data, Boolean force) {
 		if (!send_to_python) {	return;	}
+
+
 		if (data == "resetServer") {
-			AsynchronousClient.StartClientSocket (Consts.PORTSEND);
+			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
 			data = "Time(" + Environment.TickCount.ToString () + ")" + data;
 		}
 
-		int currtime = Environment.TickCount;
+		long currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
-			var t = new Thread(() => AsynchronousClient.SendAufJedenFall(data));
+			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
 			lastpythonupdate = currtime;
 		}
 	}
 
 	public void ConnectAsReceiver() {
-		AsynchronousClient.StartClientSocket (Consts.PORTASK);
+		ReceiverClient.serverdown = false;
+		ReceiverClient.StartClientSocket ();
+
+		var t = new Thread(() => ReceiverClient.StartReceiveLoop());
+		t.Start();
 	}
 
+	//TODO: DIESE FUNKTION MUSS WEG!!!! Unity fragt nicht mehr, sondeŕn kriegts gesendet. dann lastpythonresult auch anders nutzen
 	public void AskForPython() { //asynchron, daher keinen string message returnen!
 		if (!get_from_python) {	return;	}
-		int currtime = Environment.TickCount;
-		if (currtime - lastpythoncheck > Consts.lookforpythonintervalms) {
-//			var t = new Thread(() => AsynchronousClient.StartGetterClient());
+		long currtime = Environment.TickCount;
+		if (currtime - lastpythonresult > Consts.lookforpythonintervalms) {
+			//			var t = new Thread(() => SenderClient.StartGetterClient());
 //			t.Start();
-			lastpythoncheck = currtime;
+			lastpythonresult = currtime;
 		}		
 	}
 
@@ -424,17 +431,23 @@ public class AiInterface : MonoBehaviour {
 	}
 
 	public void Reconnect() {
+		Disconnect ();
 		UnityEngine.Debug.Log ("Connecting...");
-		AsynchronousClient.serverdown = false;
-		AsynchronousClient.ResetServerConnectTrials();
+		SenderClient.serverdown = false;
+		SenderClient.ResetServerConnectTrials();
+		ReceiverClient.serverdown = false;
+		ReceiverClient.ResetServerConnectTrials();
+		ConnectAsReceiver ();
 		SendToPython ("resetServer", true);
 	}
 
 	public void Disconnect() {
-		if (!AsynchronousClient.serverdown) {
+		if (!SenderClient.serverdown) {
 			UnityEngine.Debug.Log ("Disconnecting...");
-			AsynchronousClient.StopSenderClient ();
-			AsynchronousClient.serverdown = true;
+			SenderClient.StopClient ();
+			SenderClient.serverdown = true;
+			ReceiverClient.StopClient ();
+			ReceiverClient.serverdown = true;
 			AIDriving = false;
 		}
 	}

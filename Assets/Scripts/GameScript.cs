@@ -41,7 +41,8 @@ public class GameScript : MonoBehaviour {
 		//TODO! wenn man escape drückt soll der ein ANDERES menü öffnen "gehe zu letztem checkpoint, resette auto, zurück" (da drin wäre dann auch nicht timing.reset sondern timing.stop)
 		//TODO: dann beim resetten auf die resets in carcontroller, recorder, timingscript, ... achten!
 
-		AsynchronousClient.ResetServerConnectTrials ();
+
+		AiInt.SenderClient.ResetServerConnectTrials ();
 		AiInterface.KillOtherThreads ();
 
 		//TODO: diese 3 Zeilen müssen früher oder später weg.
@@ -59,7 +60,7 @@ public class GameScript : MonoBehaviour {
 
 		AiInt.send_to_python = false;
 		AiInt.get_from_python = false;
-		AsynchronousClient.serverdown = true;
+		AiInt.SenderClient.serverdown = true;
 		Recorder.sv_save_round = false;
 		CarCamera.SetActive (false);
 		MiniMapCamera.SetActive (false);
@@ -86,7 +87,7 @@ public class GameScript : MonoBehaviour {
 		if (mode.Contains("drive_AI")) {
 			AiInt.send_to_python = true;
 			AiInt.get_from_python = true;
-			AsynchronousClient.serverdown = false; 
+			AiInt.SenderClient.serverdown = false; 
 			AiInt.StartedAIMode ();
 		} 
 			
