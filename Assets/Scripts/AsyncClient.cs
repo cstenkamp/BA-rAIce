@@ -10,9 +10,6 @@ using System.Text;
 
 //stems from the Microsoft example... fun thing is only that it simply doesn't run asynchronously, haha.
 
-//TODO: gucken, dass überall wo serverdown vom Sender verändert wird auch serverdown vom receiver verändert wird!!
-
-
 public class AsynchronousClient {  //updating python's value should happen asynchronously.
 
 	//consts are always static in c#
