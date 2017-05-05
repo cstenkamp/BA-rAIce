@@ -30,7 +30,7 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	private const int trackAllXMS = 25; //bei alle 10ms sinds 4 MB...
+	private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
 	private int lasttrack = Environment.TickCount;
 
 
@@ -170,7 +170,7 @@ public class Recorder : MonoBehaviour {
 			if (!Directory.Exists ("SavedLaps/")) {
 				Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
 			} else {
-				TPMitInfoList tpl = new TPMitInfoList (SVLearnLap, trackAllXMS, DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss"), Timing.lastLapTime);
+				TPMitInfoList tpl = new TPMitInfoList (SVLearnLap, trackAllXMS, DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss"), Timing.lastLapTime, fileName);
 				System.Xml.Serialization.XmlSerializer xs = new System.Xml.Serialization.XmlSerializer (tpl.GetType ());
 				FileStream file = File.Create ("SavedLaps/" + fileName + ".svlap");
 				xs.Serialize (file, tpl);
@@ -256,12 +256,14 @@ public class TPMitInfoList
 	public int trackAllXMS;
 	public string time;
 	public float tookTime;
+	public string filename;
 	public TPMitInfoList() {}
-	public TPMitInfoList(List<TrackingPoint> tpl, int taxm, string t, float tt) 
+	public TPMitInfoList(List<TrackingPoint> tpl, int taxm, string t, float tt, string fn) 
 	{
 		TPList = tpl;
 		trackAllXMS = taxm;
 		time = t;
 		tookTime = tt;
+		filename = fn;
 	}
 }
