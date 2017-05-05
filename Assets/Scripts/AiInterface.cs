@@ -1,5 +1,7 @@
-﻿//TODO gucken ob ich nicht andere game-modi brauche habe als die momentanen?
-
+﻿/// <summary>
+/// MAIN TODO HERE:
+/// 1) Gucken was ich mache wenn MAXAGEPYTHONRESULT überschritten ist
+/// </summary>
 using UnityEngine;
 using System.Collections;
 
@@ -12,9 +14,8 @@ using System.Linq;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 500; //25;
-	public const int lookforpythonintervalms = 100; //TODO: das hier wird ersetzt!!
-	public const int MAXAGEPYTHONRESULT = 350;
+	public const int updatepythonintervalms = 50; //50;
+	public const int MAXAGEPYTHONRESULT = 150;
 	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
 	public const bool UPDATE_ONLY_IF_NEW = false; //assert dass die gleich der von python ist
 
@@ -33,9 +34,8 @@ public static class Consts { //TODO: diese hier an python schicken!
 
 public class AiInterface : MonoBehaviour {
 
-	//these are only active in the "train AI" mode
+	//this is are only active in the "train AI" mode
 	public bool send_to_python = true;
-	public bool get_from_python = true;
 
 
 	public WheelCollider colliderRL;
@@ -103,42 +103,41 @@ public class AiInterface : MonoBehaviour {
 		} else {
 			HumanTakingControl = overwrite_with;
 		}
-		ReceiverClient.response.pedals = ""; 
+		ReceiverClient.response.reset ();
 
 	}
 
 
 	void FixedUpdate() {
 		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
-				
-//			Stopwatch stopwatch = new Stopwatch();
-//			stopwatch.Reset();
-//			stopwatch.Start();
-			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die sind beide nen einzelner thread, also ruhig in fixedupdate.   (-> wenn ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
-			AskForPython(); //Da diese funktion asynchron ist, gibts keinen returnwert, nur sooner or later geupdatete values.
 
-			//			UnityEngine.Debug.Log ((Environment.TickCount - SenderClient.response.timestamp).ToString ()); //das hier sagt überhaupt gar nix.
+			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
 
-			if (Environment.TickCount - ReceiverClient.response.timestampReceive < Consts.MAXAGEPYTHONRESULT) {
-				
-				string message = ReceiverClient.response.pedals; 
+			string message;
+			if (Environment.TickCount - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
+			{
+				message = ReceiverClient.response.pedals;
+			} else { 
+				//TODO: was SOLL er tun wenn das python-result zu alt ist??
+				message = ReceiverClient.response.pedals; //[0, 0, 0]; //nicht leer, da der dann nicht die anderen sahcne überschreit!
+				AIDriving = false;
+			}
 
-				if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { //TODO: ich glaube das hier klappt nicht mehr
-					Car.ResetCar ();
-					AIDriving = false;
-				} else if ((message.Length > 0) && (message [0] == '[')) {
-					message = message.Substring (1, message.Length - 2);
-					float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
-					nn_throttle = controls [0];
-					nn_brake = controls [1];
-					nn_steer = controls [2];
-					AIDriving = true;
-				} else {
-					AIDriving = false;
-				}
+			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
+				Car.ResetCar ();
+				ReceiverClient.response.othercommand = false;
+				AIDriving = false;
+			} else if ((message.Length > 0) && (message [0] == '[')) {
+				message = message.Substring (1, message.Length - 2);
+				float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
+				nn_throttle = controls [0];
+				nn_brake = controls [1];
+				nn_steer = controls [2];
+				AIDriving = true;
 			} else {
 				AIDriving = false;
 			}
+
 		}
 	}
 
@@ -408,17 +407,6 @@ public class AiInterface : MonoBehaviour {
 
 		var t = new Thread(() => ReceiverClient.StartReceiveLoop());
 		t.Start();
-	}
-
-	//TODO: DIESE FUNKTION MUSS WEG!!!! Unity fragt nicht mehr, sondeŕn kriegts gesendet. dann lastpythonresult auch anders nutzen
-	public void AskForPython() { //asynchron, daher keinen string message returnen!
-		if (!get_from_python) {	return;	}
-		long currtime = Environment.TickCount;
-		if (currtime - lastpythonresult > Consts.lookforpythonintervalms) {
-			//			var t = new Thread(() => SenderClient.StartGetterClient());
-//			t.Start();
-			lastpythonresult = currtime;
-		}		
 	}
 
 

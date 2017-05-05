@@ -30,7 +30,7 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	private const int trackAllXMS = 100; //bei alle 10ms sinds 4 MB...
+	private const int trackAllXMS = 25; //bei alle 10ms sinds 4 MB...
 	private int lasttrack = Environment.TickCount;
 
 
@@ -170,9 +170,10 @@ public class Recorder : MonoBehaviour {
 			if (!Directory.Exists ("SavedLaps/")) {
 				Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
 			} else {
-				System.Xml.Serialization.XmlSerializer xs = new System.Xml.Serialization.XmlSerializer (SVLearnLap.GetType ());
+				TPMitInfoList tpl = new TPMitInfoList (SVLearnLap, trackAllXMS, DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss"), Timing.lastLapTime);
+				System.Xml.Serialization.XmlSerializer xs = new System.Xml.Serialization.XmlSerializer (tpl.GetType ());
 				FileStream file = File.Create ("SavedLaps/" + fileName + ".svlap");
-				xs.Serialize (file, SVLearnLap);
+				xs.Serialize (file, tpl);
 				file.Close ();
 			}	
 		}
@@ -245,5 +246,22 @@ public class TrackingPoint
 		progress = newprogress;
 		speed = newspeed;
 		vectors = newvectors;
+	}
+}
+
+[Serializable]
+public class TPMitInfoList
+{
+	public List<TrackingPoint> TPList;
+	public int trackAllXMS;
+	public string time;
+	public float tookTime;
+	public TPMitInfoList() {}
+	public TPMitInfoList(List<TrackingPoint> tpl, int taxm, string t, float tt) 
+	{
+		TPList = tpl;
+		trackAllXMS = taxm;
+		time = t;
+		tookTime = tt;
 	}
 }

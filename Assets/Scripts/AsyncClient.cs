@@ -1,7 +1,4 @@
 ﻿//MAIN TODO HIER: 
-//      1. die using von hier und vom AIInterface entsprechend aussortieren
-//		2. Warum wird laut console ein object weiter-used after being disposed?
-//      3. Wenn er nen paar mal versucht hat den server anzupingen und er ist nicht da, gibt auf
 //4. Feedback und Delta mitsenden
 //5. Am Anfang des Spiels die globalen params mitschicken (like, welche vektoren er senden wird), damit man nicht beides in python UND unity ändern muss
 
@@ -21,6 +18,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 	//consts are always static in c#
 	public const int WAITFORSOCKET = 100; 
 	private const int MAXCONNECTTRIALS = 5;
+	private const int SOCKETSTRINGDIGITS = 5;
 
    //these are non-static
 	private int serverconnecttrials;
@@ -33,7 +31,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 	private ManualResetEvent sendDone;  
 	private ManualResetEvent receiveDone;  
 
-	public Socket socket;    // es wird 2 asyncclients geben, einer fürs senden und einer fürs receiven, also wird dieser socket ENTWEDER sender ODER receiver
+	// es wird 2 asyncclients geben, einer fürs senden und einer fürs receiven, also wird dieser socket ENTWEDER sender ODER receiver
+	public Socket socket;    
 
 
 	public AsynchronousClient(bool for_sender){
@@ -86,7 +85,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
 			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
 			if (connectDone.WaitOne(WAITFORSOCKET)) {  //try to connect, if it doesn't work, the server seems down and you don't continue.
-				socket = client; //TODO: was passiert mit dem altem, wenn er noch connected ist und dann garbage-collected wird?
+				socket = client; 
 			} else {
 				increasesvtrials();
 			}
@@ -103,7 +102,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			UnityEngine.Debug.Log(SoR(is_sender) + "Socket connected to "+ client.RemoteEndPoint.ToString());  
 			connectDone.Set();  
 		} catch (SocketException) {  
-			//hier kommt er rein wenn kein Server da ist, und hier soll er sich sagen "pff", wenn kein Server da ist.
+			//hier kommt er rein wenn kein Server da ist -> teste einige male mehr, wenn zu oft, stop trying.
 			increasesvtrials ();
 		}  
 	}  
@@ -124,12 +123,13 @@ public class AsynchronousClient {  //updating python's value should happen async
 		try {
 			socket.Shutdown(SocketShutdown.Send);  
 			socket.Close(); 
-			socket = null;
+			socket = null; 
 			UnityEngine.Debug.Log(SoR(is_sender) + "Disconnected. You can manually reconnect");
 		} 
 		catch (ObjectDisposedException) {}
 		catch (NullReferenceException) {}
 	}
+
 
 	public String SoR(bool is_sender) {
 		String prestring = "(receiver) ";
@@ -150,7 +150,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		} catch (Exception e) {
 			if (e is ObjectDisposedException || e is SocketException || e is NullReferenceException) {
 				//etabliere NEUE verbindung, die daten müssen schließlich rüber!
-				StartClientSocket ();
+				StartClientSocket (); //overwrites the old "socket"
 				Send (socket, data);  
 			} else {
 				UnityEngine.Debug.Log(e.ToString());
@@ -193,7 +193,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 				Receive ();
 				receiveDone.WaitOne ();
 				UnityEngine.Debug.Log ("Response updated to: "+response.pedals+" Time it took: "+(response.timestampReceive-response.timestampStarted).ToString()+"ms");
-			} catch (NullReferenceException) {
+			} catch (NullReferenceException) { //wird in Receive() gethrowt wenn python not connected
 				StartClientSocket ();
 				//öfter versuchen als receiver zu connecten, wenns nicht geht das melden
 			}
@@ -205,7 +205,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		try {   
 			StateObject state = new StateObject();  
 			state.workSocket = socket;  
-			socket.BeginReceive( state.buffer, 0, 5, 0, new AsyncCallback(ReceiveStringLengthCallback), state); //at first you read the first 5 digits, which should be the length of the following
+			socket.BeginReceive( state.buffer, 0, SOCKETSTRINGDIGITS, 0, new AsyncCallback(ReceiveStringLengthCallback), state); //at first you read the first 5 digits, which should be the length of the following
 		} catch (NullReferenceException) {
 			throw; //der StartReceiveLoop muss sich drum kümmern, da er ansonsten wartet!
 		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString()); }  
@@ -223,7 +223,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			client.BeginReceive(state.buffer, 0, stringlength, 0, new AsyncCallback(ReceiveCallback), state);
 
 		} catch (System.ObjectDisposedException) { } //This callback will also be called if the client is already disposed - which is why we catch that.
-		catch (System.FormatException) { 
+		catch (System.FormatException) { //Wenn man pyton mittendrin beendet. Kommt dann genau ein mal.
 			UnityEngine.Debug.Log (SoR(is_sender)+"Did Python just crash?");
 			StopClient ();
 		} 
@@ -281,14 +281,15 @@ public class AsynchronousClient {  //updating python's value should happen async
 					if (othercommand == false) 
 						timestampReceive = Environment.TickCount;
 					othercommand = true;
+					if (newstr.IndexOf("Time(") > 0) {
+						newstr = newstr.Substring(0, newstr.IndexOf("Time("));
+					}
 					command = newstr;
 				} else {
 
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
 					timestampStarted = (int) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-6 ));
-
 					timestampReceive = Environment.TickCount;
-
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {
@@ -296,126 +297,12 @@ public class AsynchronousClient {  //updating python's value should happen async
 			}
 		}
 
+		public void reset() {
+			pedals = String.Empty;  
+			timestampReceive = 0;
+			timestampStarted = 0;
+			othercommand = false;
+			command = String.Empty;			
+		}
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	//
-	//
-	//
-	//	//we have a sender-client, who every x seconds updates python's status
-	//	public static void StartSenderClient(string data) {  
-	//		if ((serverconnecttrials > MAXCONNECTTRIALS) || (serverdown)) { serverdown = true; return; }
-	//		try {  
-	//			connectDone = new ManualResetEvent(false);   
-	//			sendDone = new ManualResetEvent(false);  
-	//			IPHostEntry ipHost = Dns.GetHostEntry("");
-	//			IPAddress ipAddress = ipHost.AddressList[0];  
-	//			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTSEND);  
-	//			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
-	//			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
-	//			if (connectDone.WaitOne(WAITFORSERVER)) {  //try to connect, if it doesn't work, the server seems down and you don't continue.
-	//				Send(client,preparestring(data));  
-	//				sendDone.WaitOne(WAITFORSERVER*50);  
-	//
-	//				client.Shutdown(SocketShutdown.Send);  
-	//				client.Close();  
-	//			}
-	//		} catch (Exception e) {  
-	//			UnityEngine.Debug.Log(e.ToString());  
-	//		}  
-	//	}  
-	//
-	//
-	//
-	//	//================================================================================
-	//
-
-	//
-	//	//kann sich der Getter python-seitig auf nen anderen Port anmelden, sodass Python beim anmelden an diesen Port weiß dass es da senden soll? Ja
-	//	public static void StartGetterClient() {  
-	//		if ((serverconnecttrials > MAXCONNECTTRIALS) || (serverdown)) { serverdown = true; return; }
-	//		try {  
-	//			connectDone = new ManualResetEvent(false);   
-	//			sendDone = new ManualResetEvent(false); 
-	//			receiveDone = new ManualResetEvent(false); 
-	//			IPHostEntry ipHost = Dns.GetHostEntry("");
-	//			IPAddress ipAddress = ipHost.AddressList[0];  
-	//			IPEndPoint ipEndPoint  = new IPEndPoint(ipAddress, Consts.PORTASK);  
-	//			Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);    
-	//			client.BeginConnect(ipEndPoint, new AsyncCallback(ConnectCallback), client); 
-	//			if (connectDone.WaitOne(WAITFORSERVER)) { //try to connect, if it doesn't work, the server seems down and you don't continue.
-	//				Receive(client);  //das ganze ist ja asynchron, das heißt Receive kann nix returnen sondern nur den value updaten.. was aber ja sogar gewünscht ist!
-	//				receiveDone.WaitOne(WAITFORSERVER*50);  
-	//
-	//				client.Shutdown(SocketShutdown.Send);  
-	//				client.Close();  
-	//			}
-	//		} catch (System.Threading.ThreadAbortException) { } 
-	//		  catch (Exception e) { UnityEngine.Debug.Log(e.ToString());  }  
-	//	}  
-	//
-	//
-	//
-	//
-	//
-	//
-
-	//
-	//
-	//	private static void ReceiveCallback( IAsyncResult ar ) {  
-	//		try {  
-	//			StateObject state = (StateObject) ar.AsyncState;  // Retrieve the state object and the client socket 
-	//			Socket client = state.workSocket;  
-	//			int bytesRead = client.EndReceive(ar); // Read data from the remote device. 
-	//
-	//			if (bytesRead > 0) {  
-	//				state.sb.Append(Encoding.ASCII.GetString(state.buffer,0,bytesRead));   //buffer so far...
-	//				client.BeginReceive(state.buffer,0,StateObject.BufferSize,0, new AsyncCallback(ReceiveCallback), state);  //...look for more
-	//			} else {  
-	//				if (state.sb.Length > 1) {  // All the data has arrived; put it in response.  
-	//					response.str = state.sb.ToString();  
-	//					response.timestamp = Environment.TickCount;
-	//					//UnityEngine.Debug.Log ("Python answered: "+response);
-	//				}  
-	//				receiveDone.Set();  
-	//			}  
-	//		} catch (System.ObjectDisposedException e) { } //This callback will also be called if the client is already disposed - which is why we catch that.
-	//		  catch (Exception e) { UnityEngine.Debug.Log(e.ToString()); }    
-	//	}  
-	//
-	//
-	//	private static void Receive(Socket client) {  
-	//		try {   
-	//			StateObject state = new StateObject();  
-	//			state.workSocket = client;  
-	//			client.BeginReceive( state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReceiveCallback), state);  
-	//		} catch (Exception e) {  UnityEngine.Debug.Log(e.ToString()); }  
-	//	}  
-	//
-	//
-	//	// State object for receiving data from remote device.  
-	//	public class StateObject {  
-	//		// Client socket.  
-	//		public Socket workSocket = null;  
-	//		// Size of receive buffer.  
-	//		public const int BufferSize = 256;  
-	//		// Receive buffer.  
-	//		public byte[] buffer = new byte[BufferSize];  
-	//		// Received data string.  
-	//		public StringBuilder sb = new StringBuilder();  
-	//	}  
-
 } 
