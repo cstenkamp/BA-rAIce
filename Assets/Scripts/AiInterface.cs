@@ -109,6 +109,7 @@ public class AiInterface : MonoBehaviour {
 
 
 	void FixedUpdate() {
+
 		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
 
 			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
@@ -194,7 +195,7 @@ public class AiInterface : MonoBehaviour {
 
 		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		all += "C("+ string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all += "C("+ Math.Round(Tracking.GetCenterDist(),3).ToString() + "," + string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
@@ -212,7 +213,7 @@ public class AiInterface : MonoBehaviour {
 
 
 	public float[] GetSpeedStear() {
-		float[] SpeedStearVec = new float[4] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle };
+		float[] SpeedStearVec = new float[5] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity };
 		return SpeedStearVec;
 	}
 
