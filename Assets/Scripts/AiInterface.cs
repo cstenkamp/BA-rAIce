@@ -14,7 +14,7 @@ using System.Linq;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 50; //50;
+	public const int updatepythonintervalms = 200; //50;
 	public const int MAXAGEPYTHONRESULT = 150;
 	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
 	public const bool UPDATE_ONLY_IF_NEW = false; //assert dass die gleich der von python ist
