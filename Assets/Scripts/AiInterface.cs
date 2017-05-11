@@ -189,7 +189,7 @@ public class AiInterface : MonoBehaviour {
 
 		string all = ""; 
 
-		all += "P("+((int)(Tracking.progress * 100.0f)).ToString ()+")";
+		all += "P("+(Math.Round(Tracking.progress * 100.0f ,3)).ToString ()+")";
 
 		all += "S(" + string.Join (",", GetSpeedStear ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
