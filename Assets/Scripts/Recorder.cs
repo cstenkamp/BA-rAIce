@@ -117,7 +117,11 @@ public class Recorder : MonoBehaviour {
 		if (Timing.activeLap && Timing.fastLapSet)
 		{
 			int k = thisLap.Count-1;
-			return thisLap[k].time - fastestLap[k].time;
+			try {
+				return thisLap[k].time - fastestLap[k].time;
+			} catch (ArgumentOutOfRangeException) {
+				return thisLap [k].time - fastestLap [fastestLap.Count - 1].time;
+			}
 		}
 		return 0.0f; //fürs Learnen sollte das doch eher positive infinity sein, oder? Erste basis-runde ist überall top
 	}
@@ -129,11 +133,16 @@ public class Recorder : MonoBehaviour {
 		if (Timing.activeLap && Timing.fastLapSet)
 		{
 			int k = thisLap.Count-1;
+			int k2 = fastestLap.Count - 1;
+			if (k2 > k) {
+				k2 = k;
+			}
+
 			int n = nStepsFeedback; if (k-n < 0) { n = k; } //die nStepsFeedback kann fürs netwerk sehr relevant sein, kann sein dass der mit zu vielen gar nichts macht
 															//TODO eine zusäztliche nStepsFeedback fürs lernen... da es helfen könnte sehrsehrviel öfter feedback fürs netz zu kriegen
 			float[] nDeltas = new float[2];
-			nDeltas[0] = thisLap[k-n].time - fastestLap[k-n].time; //Feedback ist im gegensatz zu delta NUR der Unterschied innerhalb des letzten checkpointsteps, whereas Delta ist der Unterschied since start...
-			nDeltas[1] = thisLap[k].time - fastestLap[k].time;     //Ist fürs Netzwerk nicht beides Relevant? Innerhalb kurven (kurven-abschnitte), die sehr viel länger als ein solches checkpointstep sind...
+			nDeltas[0] = thisLap[k-n].time - fastestLap[k2-n].time; //Feedback ist im gegensatz zu delta NUR der Unterschied innerhalb des letzten checkpointsteps, whereas Delta ist der Unterschied since start...
+			nDeltas[1] = thisLap[k].time - fastestLap[k2].time;     //Ist fürs Netzwerk nicht beides Relevant? Innerhalb kurven (kurven-abschnitte), die sehr viel länger als ein solches checkpointstep sind...
 			return nDeltas[0]-nDeltas[1];						   //Kann Deep-Q-Learning irgendwie mit 3 verschiedenen Targets im großem, mittel & kleinem maß, umgehen??
 		}
 		return 0.0f;

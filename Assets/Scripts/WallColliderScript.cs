@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class WallColliderScript : MonoBehaviour {
 
@@ -23,9 +24,20 @@ public class WallColliderScript : MonoBehaviour {
 
 	void OnCollisionEnter(Collision collision) {
 		if (Consts.wallhit_means_reset) {
-			Vector3 Position = Pos.anchorVector [Pos.getClosestAnchorBehind (Car.transform.position) - POSITIONPUNISH]; //TODO: das führt bestimmt noch bei einigen positions zu nem indexerror.
+			Vector3 Position;
+			try {
+				Position = Pos.anchorVector [Pos.getClosestAnchorBehind (Car.transform.position) - POSITIONPUNISH]; //TODO: das führt bestimmt noch bei einigen positions zu nem indexerror.
+			} catch (IndexOutOfRangeException) {
+				Position = Pos.anchorVector [0];
+			}
 			Position.y = Car.startPosition.y;
-			Quaternion Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[Pos.getClosestAnchorBehind(Car.transform.position)-POSITIONPUNISH], Vector3.up); 
+
+			Quaternion Angle;
+			try {
+				Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[Pos.getClosestAnchorBehind(Car.transform.position)-POSITIONPUNISH], Vector3.up); 
+			} catch (IndexOutOfRangeException) {
+				Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[0], Vector3.up); 
+			}
 			Timing.PunishTime (TIMEPUNISH);
 			Car.ResetToPosition (Position, Angle, true);
 		}
