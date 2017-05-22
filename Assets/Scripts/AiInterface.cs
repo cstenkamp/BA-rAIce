@@ -134,7 +134,7 @@ public class AiInterface : MonoBehaviour {
 			}
 
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
-				Car.ResetCar (false);
+				Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 				ReceiverClient.response.othercommand = false;
 				AIDriving = false;
 			} else if ((message.Length > 0) && (message [0] == '[')) {
