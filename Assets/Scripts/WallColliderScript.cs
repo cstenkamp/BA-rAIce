@@ -39,7 +39,7 @@ public class WallColliderScript : MonoBehaviour {
 				Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[0], Vector3.up); 
 			}
 			Timing.PunishTime (TIMEPUNISH);
-			Car.ResetToPosition (Position, Angle, true);
+			Car.ResetToPosition (Position, Angle, true, true);
 		}
 	}
 }

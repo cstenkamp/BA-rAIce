@@ -106,6 +106,15 @@ public class AiInterface : MonoBehaviour {
 		ReceiverClient.response.reset ();
 
 	}
+		
+	public void resetCarAI() {
+		if (Game.mode.Contains ("drive_AI")) {
+			ReceiverClient.response.reset ();
+			nn_brake = 0;
+			nn_steer = 0;
+			nn_throttle = 0;
+		}
+	}
 
 
 	void FixedUpdate() {
@@ -125,7 +134,7 @@ public class AiInterface : MonoBehaviour {
 			}
 
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
-				Car.ResetCar ();
+				Car.ResetCar (false);
 				ReceiverClient.response.othercommand = false;
 				AIDriving = false;
 			} else if ((message.Length > 0) && (message [0] == '[')) {

@@ -239,11 +239,12 @@ public class CarController : MonoBehaviour {
 		}
 	}
 
-	public void ResetCar() {
-		ResetToPosition (startPosition, startRotation, false);
+	public void ResetCar(bool send_python) {
+		UnityEngine.Debug.Log ("Car resettet" + Environment.TickCount.ToString ());
+		ResetToPosition (startPosition, startRotation, false, send_python);
 	}
 
-	public void ResetToPosition(Vector3 Position, Quaternion Rotation, bool make_valid)
+	public void ResetToPosition(Vector3 Position, Quaternion Rotation, bool make_valid, bool send_python)
 	{
 		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
 		//TODO: sicher dass ich nichts kaputt mache durch das lap-clean-enforcen?
@@ -256,6 +257,9 @@ public class CarController : MonoBehaviour {
 		Car.angularDrag = 0.0f;
 		Car.drag = 0.0f;
 		Car.ResetInertiaTensor();
+
+		AiInt.resetCarAI ();
+
 
 		// reset wheel torques and steering angles instantly
 		colliderRL.motorTorque = 0.0f;
@@ -270,7 +274,9 @@ public class CarController : MonoBehaviour {
 
 
 		// send to python that stuff changed
-		AiInt.SendToPython ("resetServer", true);
+		if (send_python) {
+			AiInt.SendToPython ("resetServer", true);
+		}
 
 		if (make_valid && Timing.lapCount > 0)
 			lapClean = true;

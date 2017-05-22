@@ -64,7 +64,7 @@ public class GameScript : MonoBehaviour {
 		CarCamera.SetActive (false);
 		MiniMapCamera.SetActive (false);
 		OverviewCamera.SetActive (false);
-		Car.ResetCar ();
+		Car.ResetCar (true);
 		Timing.ResetTiming ();
 		UserInterface.UpdateGameModeDisp ();
 		//Rec.ResetLap() ist überflüssig
