@@ -65,6 +65,7 @@ public class AiInterface : MonoBehaviour {
 	public float nn_throttle = 0;
 	public bool AIDriving = false;
 	public bool HumanTakingControl = false;
+	public bool just_hit_wall = false;
 
 	public AsynchronousClient SenderClient   = new AsynchronousClient(true);
 	public AsynchronousClient ReceiverClient = new AsynchronousClient(false);
@@ -113,6 +114,12 @@ public class AiInterface : MonoBehaviour {
 			nn_brake = 0;
 			nn_steer = 0;
 			nn_throttle = 0;
+		}
+	}
+
+	public void punish_wallhit() {
+		if (Game.mode.Contains ("drive_AI")) {
+			just_hit_wall = true;
 		}
 	}
 
@@ -204,7 +211,10 @@ public class AiInterface : MonoBehaviour {
 
 		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		all += "C("+ Math.Round(Tracking.GetCenterDist(),3).ToString() + "," + string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		float tmp = Tracking.GetCenterDist ();
+		if (just_hit_wall) 
+			tmp = 11; //10 ist die distanz der mauer, aber da er ja direkt resettet weiß er es anderenfalls nicht mehr
+		all += "C("+ Math.Round(tmp,3).ToString() + "," + string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
@@ -405,6 +415,9 @@ public class AiInterface : MonoBehaviour {
 
 		long currtime = Environment.TickCount;
 		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
+			if (data != "resetServer")
+				just_hit_wall = false;
+			
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
 			lastpythonupdate = currtime;
