@@ -354,6 +354,10 @@ public class PositionTracking : MonoBehaviour {
 				}
 			} 
 	    }
+		if (argClosest == int.MaxValue) {
+			//wenn der progress kleiner ist als alle listenprogresses
+			argClosest = 0;
+		}
 		return argClosest;
 	}
 
@@ -387,9 +391,21 @@ public class PositionTracking : MonoBehaviour {
 
 		// get sign for centerDist
 		int anchor = ClosestSmallerThan(anchorProgress, progress);
+		if (anchor >= anchorVector.Length) { anchor -= anchorVector.Length; }
 		int anchorPlus1 = anchor+1;
 		if (anchorPlus1 >= anchorVector.Length) { anchorPlus1 -= anchorVector.Length; }
-		Vector3 AB = anchorVector[anchorPlus1]-anchorVector[anchor];
+		Vector3 AB = new Vector3();
+		try {
+			AB = anchorVector[anchorPlus1]-anchorVector[anchor];
+		}
+		catch {
+			UnityEngine.Debug.Log ("ERROR ERROR 123");
+			UnityEngine.Debug.Log (anchor);
+			UnityEngine.Debug.Log (anchorProgress.Length);
+			UnityEngine.Debug.Log (anchorVector [anchor]);
+			UnityEngine.Debug.Log (anchorPlus1);
+			UnityEngine.Debug.Log (anchorVector [anchorPlus1]);
+		}
 		Vector3 PC = carPosition-perpendicularPoint;
 		Vector3 cross = Vector3.Cross(AB,PC);
 

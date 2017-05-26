@@ -388,6 +388,9 @@ public class AiInterface : MonoBehaviour {
 				}
 			} 
 		}
+		if (argClosest == int.MaxValue) {
+			argClosest = 0;
+		}
 		return argClosest;
 	}
 
