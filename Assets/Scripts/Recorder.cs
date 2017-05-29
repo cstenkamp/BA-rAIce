@@ -138,8 +138,11 @@ public class Recorder : MonoBehaviour {
 				k2 = k;
 			}
 
-			int n = nStepsFeedback; if (k-n < 0) { n = k; } //die nStepsFeedback kann fürs netwerk sehr relevant sein, kann sein dass der mit zu vielen gar nichts macht
-															//TODO eine zusäztliche nStepsFeedback fürs lernen... da es helfen könnte sehrsehrviel öfter feedback fürs netz zu kriegen
+			int n = nStepsFeedback; 
+			if (k-n < 0) { n = k; } //die nStepsFeedback kann fürs netwerk sehr relevant sein, kann sein dass der mit zu vielen gar nichts macht
+			if (k2-n< 0) { n = k; }
+																	//TODO eine zusäztliche nStepsFeedback fürs lernen... da es helfen könnte sehrsehrviel öfter feedback fürs netz zu kriegen
+
 			float[] nDeltas = new float[2];
 			nDeltas[0] = thisLap[k-n].time - fastestLap[k2-n].time; //Feedback ist im gegensatz zu delta NUR der Unterschied innerhalb des letzten checkpointsteps, whereas Delta ist der Unterschied since start...
 			nDeltas[1] = thisLap[k].time - fastestLap[k2].time;     //Ist fürs Netzwerk nicht beides Relevant? Innerhalb kurven (kurven-abschnitte), die sehr viel länger als ein solches checkpointstep sind...
