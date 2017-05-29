@@ -24,7 +24,7 @@ public class MinimapScript : MonoBehaviour {
 
 	public float[,] GetVisionDisplay() {
 		Camera cam = gameObject.GetComponent<Camera> ();
-		cam.aspect = 1.0f;
+		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
 
 		cam.rect = new Rect (0, 0, 1, 1);
 		RenderTexture myRT = new RenderTexture(Consts.visiondisplay_x, Consts.visiondisplay_y, 24);  //,RenderTextureFormat.ARGB32
@@ -43,8 +43,9 @@ public class MinimapScript : MonoBehaviour {
 			//		System.IO.File.WriteAllBytes("./picpicpic.png", bytes );
 
 
+			float displaywidth = 0.1f;
 			cam.targetTexture = null;
-			cam.rect = new Rect(0.77f, 0.63f, 0.1f, 0.25f);
+			cam.rect = new Rect(0.88f, 0.64f, displaywidth, displaywidth/(0.5f*cam.aspect));
 
 			float[,] visiondisplay = new float[myImg.width, myImg.height];
 
