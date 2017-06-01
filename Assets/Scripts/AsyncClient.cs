@@ -189,7 +189,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 				receiveDone = new ManualResetEvent(false); 
 				Receive ();
 				receiveDone.WaitOne ();
-				UnityEngine.Debug.Log ("Response updated to: "+response.pedals+" Time it took: "+(response.timestampReceive-response.timestampStarted).ToString()+"ms");
+				UnityEngine.Debug.Log ("Response updated to: "+response.pedals+" Time it took: "+(response.timestampReceive-response.timestampStarted).ToString()+"ms");  //ASDF
 			} catch (NullReferenceException) { //wird in Receive() gethrowt wenn python not connected
 				StartClientSocket ();
 				//öfter versuchen als receiver zu connecten, wenns nicht geht das melden

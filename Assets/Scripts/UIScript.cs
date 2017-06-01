@@ -125,8 +125,6 @@ public class UIScript : MonoBehaviour {
 		GearDisplay.enabled = false;
 		menuSelection = 0;
 		drivingOverlayActive = true;
-		if (Consts.debug_show_visiondisp) 
-			Minmap.CreatePixelImage(Minmap.pixel, Minmap.pixelParent, Minmap.GetVisionDisplay().GetLength(0), Minmap.GetVisionDisplay().GetLength(1));
 	}
 	
 	// Update is called once per frame
@@ -191,11 +189,6 @@ public class UIScript : MonoBehaviour {
 				SSlipRL.text = RL[1].ToString("F2");
 				SSlipRR.text = RR[1].ToString("F2");
 
-				// GetVisionDisplay
-				if (Consts.debug_show_visiondisp) {
-					float[,] visionDisplay = Minmap.GetVisionDisplay ();
-					Minmap.ShowVisionDisplay (visionDisplay);
-				}
 			}
 
 			// current laptime display

@@ -18,5 +18,6 @@ public class ConfirmColliderScript : MonoBehaviour {
 	void OnTriggerExit (Collider other)
 	{
 		Timing.FlipCcPassed();
+		Timing.justResettet = false;
 	}
 }

@@ -22,9 +22,9 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //42
 
-	public const bool debug_show_visiondisp = false;
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
+	public const bool debug_makevalidafterwallhit = false;
 
 	public const bool wallhit_means_reset = true;
 }
@@ -126,10 +126,12 @@ public class AiInterface : MonoBehaviour {
 
 	void FixedUpdate() {
 
-		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
+		if (Game.mode.Contains("drive_AI")) {
 
 			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
-
+		}
+		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
+			
 			string message;
 			if (Environment.TickCount - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
 			{
@@ -139,8 +141,8 @@ public class AiInterface : MonoBehaviour {
 				message = ReceiverClient.response.pedals; //[0, 0, 0]; //nicht leer, da der dann nicht die anderen sahcne überschreit!
 				AIDriving = false;
 			}
-
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
+
 				Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 				ReceiverClient.response.othercommand = false;
 				AIDriving = false;
@@ -232,7 +234,7 @@ public class AiInterface : MonoBehaviour {
 
 
 	public float[] GetSpeedStear() {
-		float[] SpeedStearVec = new float[5] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity };
+		float[] SpeedStearVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity, Convert.ToInt32(Tracking.rightDirection) };
 		return SpeedStearVec;
 	}
 

@@ -15,10 +15,7 @@ public class MinimapScript : MonoBehaviour {
 
 
 	void Start() {
-		if (!Consts.debug_show_visiondisp) {
-			pixel.enabled = false;
-			Destroy (pixelParent.gameObject);
-		}
+
 	}
 
 

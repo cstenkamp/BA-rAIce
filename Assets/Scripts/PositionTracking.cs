@@ -1,15 +1,20 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Linq;
+using System;
 
 //TODO: im Optionen-Menü noch debug-optionen um zb. das hier anzuzeigen, das added dann einfach zum game mode.
 //TODO: eine funktion, die ALLES back-upt, furs hardreset (siehe AiInterface). Die kann dann bei, say, 10% der Strecke gecallt werden und ist im pausenmenu available
 
 public class PositionTracking : MonoBehaviour {
 
+	public CarController Car;
 	public GameObject trackOutline;
 	public Vector3[] anchorVector;
 	public float progress;
+	public float lastFrameProgress;
+	public long lastRightDirectionTime;
+	public bool rightDirection = true;
 	public GameObject timedCar;
 	public Recorder Rec;
 	public float[] segmentAngles;
@@ -41,6 +46,7 @@ public class PositionTracking : MonoBehaviour {
 		absoluteAnchorAngles = GetAbsoluteAnchorAngles(segmentAngles);
 		anchorProgress = GetAbsoluteAnchorProgress(anchorVector);
 		trackLength = segmentLengths.Sum();
+		lastRightDirectionTime = Environment.TickCount;
 
 		if (Consts.debug_showanchors)
 			ShowAnchors(anchorVector, anchorPrototype, countText, "absoluteAngles"); // for debugging
@@ -55,8 +61,30 @@ public class PositionTracking : MonoBehaviour {
 
 	void FixedUpdate ()
 	{
+		lastFrameProgress = progress;
 		progress = GetProgress(anchorVector, segmentLengths, timedCar.transform.position);
 		TriggerRec(progress, 0.5f);
+
+
+		Quaternion Angle;
+		try {
+			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[getClosestAnchorBehind(Car.transform.position)], Vector3.up); 
+		} catch (IndexOutOfRangeException) {
+			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[0], Vector3.up); 
+		}
+
+		if ((lastFrameProgress <= progress) || (Quaternion.Angle(Angle, Car.transform.rotation) < 100)) {
+			lastRightDirectionTime = Environment.TickCount;
+		}
+
+		if (Environment.TickCount - lastRightDirectionTime > 500) {
+			//UnityEngine.Debug.Log ("Wrong Direction!");
+			rightDirection = false;
+		} else {
+			rightDirection = true;
+		}
+
+
 	}
 
 	// #####################################################################

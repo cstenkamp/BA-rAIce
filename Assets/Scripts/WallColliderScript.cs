@@ -33,6 +33,12 @@ public class WallColliderScript : MonoBehaviour {
 			}
 			Position.y = Car.startPosition.y;
 
+			if ((Pos.getClosestAnchorBehind (Car.transform.position) - POSITIONPUNISH) < 1) 
+			{
+				Timing.ccPassed = false;
+				Timing.justResettet = true;
+			}
+
 			Quaternion Angle;
 			try {
 				Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[Pos.getClosestAnchorBehind(Car.transform.position)-POSITIONPUNISH], Vector3.up); 
@@ -41,7 +47,8 @@ public class WallColliderScript : MonoBehaviour {
 			}
 			AiInt.punish_wallhit ();
 			Timing.PunishTime (TIMEPUNISH);
-			Car.ResetToPosition (Position, Angle, true, false); //letzte false, weil python bei nem Wallhit eben nicht resetten soll sondern wissen was den hit verursacht hat
+			Car.ResetToPosition (Position, Angle, Consts.debug_makevalidafterwallhit, false); //letzte false, weil python bei nem Wallhit eben nicht resetten soll sondern wissen was den hit verursacht hat
+			AiInt.SendToPython ("wallhit", true);
 		}
 	}
 }

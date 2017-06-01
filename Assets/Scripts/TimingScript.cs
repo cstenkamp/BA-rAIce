@@ -16,6 +16,7 @@ public class TimingScript : MonoBehaviour {
 	public bool ccPassed = false;
 	public UIScript UserInterface;
 	public CarController Car;
+	public bool justResettet = false;
 
 	// variables for lapSaving
 	public Recorder Rec;
@@ -40,26 +41,27 @@ public class TimingScript : MonoBehaviour {
 	// Start/ finish collider updating the laptimes
 	void OnTriggerEnter (Collider other)            //"this" here is the timingsystem, a collider in root, and the only "other" there is that can move is only the car
 	{
-		// last lap time & fastest lap time update 
-		if (activeLap && ccPassed && Car.lapClean)  //ccpassed heißt dass er schon durch den zweiten collider ist, lapclean heißt 1 reifen auf straße... activelap ist true sobald man den trigger entered (was dank CarControllerSkript nur im game-modus geht)
-		{                                           //also, im grunde kommt man hier schon rein wenn man eine valide, ungecheatete, komplette runde gefahren ist.
-			lastLapTime = Time.time - currentLapStart + time_punishs;
-			timeSet = true;
-			if (!fastLapSet || (timeSet && lastLapTime < fastestLapTime)) //wenn diese die erste oder letzte runde ist
-			{
-				fastestLapTime = lastLapTime;
-				fastestLapCount = lapCount;
-				fastLapSet = true;
+		if (!justResettet) {
+			justResettet = false;
+			// last lap time & fastest lap time update 
+			if (activeLap && ccPassed && Car.lapClean) {  //ccpassed heißt dass er schon durch den zweiten collider ist, lapclean heißt 1 reifen auf straße... activelap ist true sobald man den trigger entered (was dank CarControllerSkript nur im game-modus geht)//also, im grunde kommt man hier schon rein wenn man eine valide, ungecheatete, komplette runde gefahren ist.
+				lastLapTime = Time.time - currentLapStart + time_punishs;
+				timeSet = true;
+				if (!fastLapSet || (timeSet && lastLapTime < fastestLapTime)) { //wenn diese die erste oder letzte runde ist
+					fastestLapTime = lastLapTime;
+					fastestLapCount = lapCount;
+					fastLapSet = true;
+				}
+				Rec.FinishList ();
 			}
-			Rec.FinishList();
+			activeLap = true; //activelap ists erst nach dem zweiten validen ungecheateten colliderdurchlauf
+			Rec.StartList ();
+			lapCount += 1;
+			currentLapStart = Time.time;
+			Car.LapCleanTrue ();
+			ccPassed = false; //wird erst wieder true wenn man durch den zweiten collider ist, und wieder falls sobald man cheatenderweise nochmal anschließend zurückfährt (deswegen da ontriggerexit!)
+			time_punishs = 0;
 		}
-		activeLap = true; //activelap ists erst nach dem zweiten validen ungecheateten colliderdurchlauf
-		Rec.StartList();
-		lapCount += 1;
-		currentLapStart = Time.time;
-		Car.LapCleanTrue();
-		ccPassed = false; //wird erst wieder true wenn man durch den zweiten collider ist, und wieder falls sobald man cheatenderweise nochmal anschließend zurückfährt (deswegen da ontriggerexit!)
-		time_punishs = 0;
 	}
 
 	public void PunishTime(float howmuch) 
