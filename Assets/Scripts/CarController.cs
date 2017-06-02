@@ -309,10 +309,13 @@ public class CarController : MonoBehaviour {
 		string currentSurface = CheckSurface(wheel);
 		if (currentSurface == "track") { surface_multi = 1.0f; }
 		if (currentSurface == "curb") { surface_multi = 0.9f; }
-		if (currentSurface == "off") { surface_multi = 0.5f; }
-
+		if (Consts.sei_verzeihender)
+			if (currentSurface == "off") { surface_multi = 0.7f; } //TODO: war 0.5f, aber mit 0.7f ist es VIEL verzeihender.
+		else
+			if (currentSurface == "off") { surface_multi = 0.5f; } 
+		
 		// slip handling
-		float slipAlpha = 0.5f; 		// upper bound of grip loss through slip
+		float slipAlpha = 0.5f; 		// upper bound of grip loss through slip //TODO: war 0.5, aber mit demwerthier ists verzeihender
 		float posSlip_multi = 1.0f;
 		float negSlip_multi = 1.0f;
 		float negSlip_factor = 1.0f;
@@ -326,7 +329,10 @@ public class CarController : MonoBehaviour {
 		}
 		else if (slipVector[0] < 0) // if there is negative slip
 		{
-			negSlip_multi = (1.0f-Math.Abs(forwardSlip)*negSlip_factor);
+			if (Consts.sei_verzeihender) 
+				negSlip_multi = (1.0f-(Math.Abs(forwardSlip)*0.1f)*negSlip_factor); //TODO: war die zeile drunter, aber hiermit ists verzeihender
+			else
+			 	negSlip_multi = (1.0f-Math.Abs(forwardSlip)*negSlip_factor);
 			if (negSlip_multi < 0) { negSlip_multi = 0; }
 		}
 
@@ -377,7 +383,6 @@ public class CarController : MonoBehaviour {
 			slipVector[1] = hit.sidewaysSlip;
 		}
 		else {
-			slipVector[0] =		 -5.0f;
 			slipVector[1] = -5.0f;
 		}
 		return slipVector;

@@ -26,6 +26,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool debug_showanchors = false;
 	public const bool debug_makevalidafterwallhit = false;
 
+	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 }
 
@@ -119,6 +120,7 @@ public class AiInterface : MonoBehaviour {
 
 	public void punish_wallhit() {
 		if (Game.mode.Contains ("drive_AI")) {
+			SendToPython ("wallhit", true); //ist das doppelt gemoppelt?
 			just_hit_wall = true;
 		}
 	}
@@ -198,7 +200,7 @@ public class AiInterface : MonoBehaviour {
 
 	public string GetAllInfos() {
 		//Keys: P: Progress as a real number in percent
-		//      S: SpeedStearVec (rounded to 4)
+		//      S: SpeedSteerVec (rounded to 4)
 		//		T: CarStatusVec  (rounded to 4)
 		//		C: CenterDistVec (rounded to 4)
 		//		L: LookAheadVec  (rounded to 4)
@@ -209,7 +211,7 @@ public class AiInterface : MonoBehaviour {
 
 		all += "P("+(Math.Round(Tracking.progress * 100.0f ,3)).ToString ()+")";
 
-		all += "S(" + string.Join (",", GetSpeedStear ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all += "S(" + string.Join (",", GetSpeedSteer ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
@@ -233,17 +235,17 @@ public class AiInterface : MonoBehaviour {
 
 
 
-	public float[] GetSpeedStear() {
-		float[] SpeedStearVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity, Convert.ToInt32(Tracking.rightDirection) };
-		return SpeedStearVec;
+	public float[] GetSpeedSteer() {
+		float[] SpeedSteerVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity, Convert.ToInt32(Tracking.rightDirection) };
+		return SpeedSteerVec;
 	}
 
 
-	public void SetSpeedStear(float[] SpeedStearVec) {
-		colliderRL.motorTorque = SpeedStearVec [0];
-		colliderRR.motorTorque = SpeedStearVec [1];
-		colliderFL.steerAngle = SpeedStearVec [2];
-		colliderFR.steerAngle = SpeedStearVec [3];
+	public void SetSpeedSteer(float[] SpeedSteerVec) {
+		colliderRL.motorTorque = SpeedSteerVec [0];
+		colliderRR.motorTorque = SpeedSteerVec [1];
+		colliderFL.steerAngle = SpeedSteerVec [2];
+		colliderFR.steerAngle = SpeedSteerVec [3];
 	}
 
 
@@ -318,7 +320,7 @@ public class AiInterface : MonoBehaviour {
 
 	public float[] GetCarStatusVector() {
 		float[] carStatusVector = new float[9]; // length = sum(#) ~=18
-		carStatusVector[0] = Car.velocity/200.0f; // car velocity > split up into more nodes 	# 1      //why do we need both the velocity and the speed from GetSpeedStear?
+		carStatusVector[0] = Car.velocity/200.0f; // car velocity > split up into more nodes 	# 1      //why do we need both the velocity and the speed from GetSpeedSteer?
 		carStatusVector[1] = Car.GetSlip(Car.colliderFL)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[2] = Car.GetSlip(Car.colliderFR)[0]; // wheel rotation relative to car	# 1
 		carStatusVector[3] = Car.GetSlip(Car.colliderRL)[0]; // wheel rotation relative to car	# 1
