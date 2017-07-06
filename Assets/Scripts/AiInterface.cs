@@ -242,7 +242,30 @@ public class AiInterface : MonoBehaviour {
 
 
 	public float[] GetSpeedSteer() {
-		float[] SpeedSteerVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, Car.velocity, Convert.ToInt32(Tracking.rightDirection) };
+		float velo = Car.velocity;
+		if (HumanTakingControl) { //um geschwindigkeiten zu faken damit man sich die entsprechenden q-werte anschauen kann
+			if (Input.GetKey (KeyCode.Alpha0)) 
+				velo = 0;
+			if (Input.GetKey (KeyCode.Alpha1))
+				velo = 20;
+			if (Input.GetKey (KeyCode.Alpha2))
+				velo = 40;
+			if (Input.GetKey (KeyCode.Alpha3))
+				velo = 60;
+			if (Input.GetKey (KeyCode.Alpha4))
+				velo = 90;
+			if (Input.GetKey (KeyCode.Alpha5))
+				velo = 110;
+			if (Input.GetKey (KeyCode.Alpha6))
+				velo = 140;
+			if (Input.GetKey (KeyCode.Alpha7))
+				velo = 180;
+			if (Input.GetKey (KeyCode.Alpha8))
+				velo = 210;
+			if (Input.GetKey (KeyCode.Alpha9))
+				velo = 250;			
+		}
+		float[] SpeedSteerVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection) };
 		return SpeedSteerVec;
 	}
 
