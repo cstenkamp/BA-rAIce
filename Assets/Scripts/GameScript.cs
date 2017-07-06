@@ -41,7 +41,7 @@ public class GameScript : MonoBehaviour {
 		//TODO! wenn man escape drückt soll der ein ANDERES menü öffnen "gehe zu letztem checkpoint, resette auto, zurück" (da drin wäre dann auch nicht timing.reset sondern timing.stop)
 		//TODO: dann beim resetten auf die resets in carcontroller, recorder, timingscript, ... achten!
 
-
+		Car.UnQuickPause ();
 		AiInt.SenderClient.ResetServerConnectTrials ();
 		AiInterface.KillOtherThreads ();
 

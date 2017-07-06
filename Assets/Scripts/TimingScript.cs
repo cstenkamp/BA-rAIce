@@ -29,8 +29,8 @@ public class TimingScript : MonoBehaviour {
 		time_punishs = 0;	
 	}
 	
-	// Update is called once per frame
-	void Update ()
+	// not sure if this is supposed to be in update or fixedupdate.
+	void FixedUpdate () 
 	{
 		if (activeLap)
 		{

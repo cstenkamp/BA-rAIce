@@ -26,6 +26,7 @@ public class CarController : MonoBehaviour {
 
 	public bool lapClean;
 	public bool justrespawned = false;
+	public bool ShowThisGUI = false;
 	string surfaceFL;
 	string surfaceFR;
 	string surfaceRL;
@@ -150,11 +151,17 @@ public class CarController : MonoBehaviour {
 	}
 
 
-
-
-
 	void Update()
 	{
+
+		if (Input.GetKeyDown(KeyCode.Q)) {   
+			if (Game.mode.Contains ("driving")) {
+				QuickPause ();
+			} else {
+				UnQuickPause ();
+			}
+		}
+
 		if (Game.mode.Contains("driving"))
 		{
 			// reverse gear
@@ -163,7 +170,8 @@ public class CarController : MonoBehaviour {
 					gear *= -1.0f; 
 				}
 			}
-	
+
+			//TODO: shouldn't this part here be in FixedUpdate? @Leon
 			// wheels rotation
 			transformFL.Rotate(colliderFL.rpm/60*360*Time.deltaTime,0,0);
 			transformFR.Rotate(colliderFR.rpm/60*360*Time.deltaTime,0,0);
@@ -209,6 +217,7 @@ public class CarController : MonoBehaviour {
 			Vector3 tmpPosRR = transformRR.transform.position;
 			tmpPosRR.y = RRpos.y;
 			transformRR.position = tmpPosRR;
+			//this part here end
 
 		}
 
@@ -416,6 +425,40 @@ public class CarController : MonoBehaviour {
 	public void LapCleanTrue()
 	{
 		lapClean = true;
+	}
+
+
+	//the Quick-pause function, triggered by Q or the python-client
+
+	public void QuickPause() {
+		if (Game.mode.Contains ("driving")) {
+			Game.mode = Game.mode.Where (val => val != "driving").ToArray ();
+			Game.UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
+			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
+
+			Game.CarCamera.SetActive (false); 
+			ShowThisGUI = true;
+		}
+	}
+
+
+	void OnGUI () {
+		if (ShowThisGUI) {
+			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
+			myRT.Create ();
+			GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
+			ShowThisGUI = true;
+		}
+	}
+
+
+	public void UnQuickPause() {
+		if ( (!Game.mode.Contains ("driving")) && (!Game.mode.Contains ("menu"))) {
+			Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
+			Game.UserInterface.UpdateGameModeDisp ();
+			Game.CarCamera.SetActive (true);
+			Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
+		}
 	}
 
 }

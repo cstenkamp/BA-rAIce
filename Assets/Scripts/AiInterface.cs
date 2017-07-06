@@ -96,6 +96,9 @@ public class AiInterface : MonoBehaviour {
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
 		}
+		if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
+			if ((Game.mode.Contains ("drive_AI")) && !HumanTakingControl)
+				Car.UnQuickPause ();
 	}
 
 
@@ -144,10 +147,13 @@ public class AiInterface : MonoBehaviour {
 				AIDriving = false;
 			}
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
-
 				Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 				ReceiverClient.response.othercommand = false;
 				AIDriving = false;
+			} else if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseFreeze") { 
+				Car.QuickPause ();
+			} else if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") { 
+				Car.UnQuickPause (); //is useless here, because FixedUpdate is not run during Freeze
 			} else if ((message.Length > 0) && (message [0] == '[')) {
 				message = message.Substring (1, message.Length - 2);
 				float[] controls = Array.ConvertAll(message.Split (','), float.Parse);

@@ -55,8 +55,6 @@ public class PositionTracking : MonoBehaviour {
 	// Update is called once per frame
 	void Update()
 	{
-		if (Consts.debug_showperpendicular)
-			ShowPerpendicular(); // for debugging
 	}
 
 	void FixedUpdate ()
@@ -84,6 +82,8 @@ public class PositionTracking : MonoBehaviour {
 			rightDirection = true;
 		}
 
+		if (Consts.debug_showperpendicular)
+			ShowPerpendicular(); // for debugging
 
 	}
 
