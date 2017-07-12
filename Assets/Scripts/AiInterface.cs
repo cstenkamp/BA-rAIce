@@ -14,13 +14,15 @@ using System.Linq;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 200; //50;
+	public const int updatepythonintervalms = 200; //minimally 50, aka 20 FPS
 	public const int MAXAGEPYTHONRESULT = 150;
 	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
 	public const bool UPDATE_ONLY_IF_NEW = false; //assert dass die gleich der von python ist
 
 	public const int visiondisplay_x = 30; //30
-	public const int visiondisplay_y = 45; //42
+	public const int visiondisplay_y = 45; //45
+	public const int visiondisp2_x = 30; //30
+	public const int visiondisp2_y = 45; //45
 
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
@@ -28,16 +30,15 @@ public static class Consts { //TODO: diese hier an python schicken!
 
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
+
+	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool SeeCurbAsOff = true;
 }
 
 //================================================================================
 
 
 public class AiInterface : MonoBehaviour {
-
-	//this is are only active in the "train AI" mode
-	public bool send_to_python = true;
-
 
 	public WheelCollider colliderRL;
 	public WheelCollider colliderRR;
@@ -47,7 +48,9 @@ public class AiInterface : MonoBehaviour {
 	public PositionTracking Tracking;
 	public CarController Car;
 	public MinimapScript Minmap;
+	public MiniMap2Script Minmap2;
 	public GameScript Game;
+	public Recorder Rec;
 
 	// for debugging
 	public GameObject posMarker1;
@@ -91,7 +94,8 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	// Update is called once per frame, and doesn't let the actual game wait
+	// Update is called once per frame, and doesn't let the actual game wait (and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here)
+	// In Update the infos are LOADed, if CREATE_VECS_ALL/25 ms passed.
 	void Update () {
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
@@ -109,9 +113,9 @@ public class AiInterface : MonoBehaviour {
 			HumanTakingControl = overwrite_with;
 		}
 		ReceiverClient.response.reset ();
-
 	}
 		
+
 	public void resetCarAI() {
 		if (Game.mode.Contains ("drive_AI")) {
 			ReceiverClient.response.reset ();
@@ -120,6 +124,7 @@ public class AiInterface : MonoBehaviour {
 			nn_throttle = 0;
 		}
 	}
+
 
 	public void punish_wallhit() {
 		if (Game.mode.Contains ("drive_AI")) {
@@ -131,12 +136,13 @@ public class AiInterface : MonoBehaviour {
 
 	void FixedUpdate() {
 
+		//SENDING the already prepared (every CREATE_VECS_ALL/25 ms) data to python (all updatepythonintervalms/200 ms)
 		if (Game.mode.Contains("drive_AI")) {
-
 			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
 		}
+
+		//RECEIVING the result from python
 		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
-			
 			string message;
 			if (Environment.TickCount - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
 			{
@@ -174,28 +180,28 @@ public class AiInterface : MonoBehaviour {
 
 		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 			lastpythonsent = GetAllInfos ();
+			//ASDF UnityEngine.Debug.Log ();
 			lastgetvectortime = currtime;
 		} 
-//		if (!Car.lapClean)
-//			tosend = "invalidround";
 		return lastpythonsent;
 	}
 
 
-	private string TwoDArrayToStr(float[,] array) {
-		string alltext = "";
-		string currline = "";
-		for (int i = 0; i < array.GetLength (0); i++) {
-			currline = "";
-			for (int j = 0; j < array.GetLength (1); j++) {
-				currline = currline + (array [i, j]*2).ToString();
-			}
-			//clinenr = ParseIntBase3 (currline);
-			//alltext = alltext + clinenr.ToString("X") + ",";
-			alltext = alltext + currline.ToString() + ",";
-		}
-		return alltext;
-	}
+//not quite necessary anymore, this function
+//	private string TwoDArrayToStr(float[,] array) {
+//		string alltext = "";
+//		string currline = "";
+//		for (int i = 0; i < array.GetLength (0); i++) {
+//			currline = "";
+//			for (int j = 0; j < array.GetLength (1); j++) {
+//				currline = currline + (array [i, j]).ToString();
+//			}
+//			//clinenr = ParseIntBase3 (currline);
+//			//alltext = alltext + clinenr.ToString("X") + ",";
+//			alltext = alltext + currline.ToString() + ",";
+//		}
+//		return alltext;
+//	}
 
 
 	//================================================================================
@@ -205,17 +211,22 @@ public class AiInterface : MonoBehaviour {
 
 
 	public string GetAllInfos() {
-		//Keys: P: Progress as a real number in percent
+		//Keys: P: Progress as a real number in percent, Laptime rounded to 2, lapcount, validlap
 		//      S: SpeedSteerVec (rounded to 4)
 		//		T: CarStatusVec  (rounded to 4)
 		//		C: CenterDistVec (rounded to 4)
 		//		L: LookAheadVec  (rounded to 4)
-		//		V: VisionVector  (converted to decimal)
-		//		R: Progress as a vector (rounded to 4)
+		//	   V1: VisionVector1 (converted to decimal)
+		//	   V2: VisionVector2 (converted to decimal) (if needed)
+		//		R: Progress as a vector (rounded to 4) 
+		//		D: Delta & Feedback
+		//  CTime: CreationTime of Vector (Not send-time)
 
 		string all = ""; 
 
-		all += "P("+(Math.Round(Tracking.progress * 100.0f ,3)).ToString ()+")";
+		all += "CTime(" + Environment.TickCount.ToString () + ")";
+
+		all += "P("+(Math.Round(Tracking.progress * 100.0f ,3)).ToString () +","+ Math.Round(Car.Timing.currentLapTime,2).ToString() +","+ Car.Timing.lapCount.ToString() +","+ Car.lapClean.ToString()[0] +")";
 
 		all += "S(" + string.Join (",", GetSpeedSteer ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
@@ -228,14 +239,18 @@ public class AiInterface : MonoBehaviour {
 
 		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		all += "V(" + TwoDArrayToStr (Minmap.GetVisionDisplay ()) + ")";
+		all += "V1(" + Minmap.GetVisionDisplay () + ")";
+
+		if (Consts.secondcamera)
+			all += "V2(" + Minmap2.GetVisionDisplay () + ")"; //TODO //ASDF
 
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+
+		all += "D(" + Math.Round(Rec.GetDelta(), 2).ToString() +","+ Math.Round(Rec.GetFeedback(), 2).ToString() + ")";
 
 		//TODO: gucken welche vektoren ich brauche
 		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
-		//TODO: Delta und Feedback vom recorder ebenfalls returnen
 		return all;
 	}
 
@@ -270,12 +285,13 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	public void SetSpeedSteer(float[] SpeedSteerVec) {
-		colliderRL.motorTorque = SpeedSteerVec [0];
-		colliderRR.motorTorque = SpeedSteerVec [1];
-		colliderFL.steerAngle = SpeedSteerVec [2];
-		colliderFR.steerAngle = SpeedSteerVec [3];
-	}
+	//diese funktion wäre nötig für eine perfekt-reset-funktion
+//	public void SetSpeedSteer(float[] SpeedSteerVec) {
+//		colliderRL.motorTorque = SpeedSteerVec [0];
+//		colliderRR.motorTorque = SpeedSteerVec [1];
+//		colliderFL.steerAngle = SpeedSteerVec [2];
+//		colliderFR.steerAngle = SpeedSteerVec [3];
+//	}
 
 
 
@@ -372,10 +388,10 @@ public class AiInterface : MonoBehaviour {
 		return carStatusVector;
 	}
 
+
 	public void SetCarStatusFromVector(float[] carStatusVector) {
 		Car.velocity = carStatusVector [0] * 200;
 		//TODO: 'setslip' undso... falls das geht.
-
 	}
 
 
@@ -439,14 +455,13 @@ public class AiInterface : MonoBehaviour {
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls SenderClient's StartSenderClient
 	public void SendToPython(string data, Boolean force) {
-		if (!send_to_python) {	return;	}
-
+		if (!(Game.mode.Contains ("drive_AI"))) {return;}
 
 		if (data == "resetServer") {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
-			data = "Time(" + Environment.TickCount.ToString () + ")" + data;
+			data = "STime(" + Environment.TickCount.ToString () + ")" + data;
 		}
 
 		long currtime = Environment.TickCount;

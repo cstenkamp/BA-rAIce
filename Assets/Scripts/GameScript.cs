@@ -9,7 +9,8 @@ public class GameScript : MonoBehaviour {
 	public string[] mode = new string[1]{"menu"};
 	public GameObject OverviewCamera;
 	public GameObject CarCamera;
-    public GameObject MiniMapCamera;
+	public GameObject MiniMapCamera;
+	public GameObject MiniMapCam2;
     public CarController Car;
 	public TimingScript Timing;
 	public Recorder Rec;
@@ -21,7 +22,15 @@ public class GameScript : MonoBehaviour {
 	{
 		mode = new string[1]{"menu"};
 		CarCamera.SetActive(false);
-        MiniMapCamera.SetActive(false);
+		MiniMapCamera.SetActive(false);
+		MiniMapCam2.SetActive (false); 
+		if (!Consts.secondcamera) { 
+			((Camera)MiniMapCam2.GetComponent<Camera>()).enabled = false;	
+			((Camera)MiniMapCamera.GetComponent<Camera>()).orthographicSize = 57;
+		} else {
+			((Camera)MiniMapCamera.GetComponent<Camera>()).orthographicSize = 75;
+			((Camera)MiniMapCam2.GetComponent<Camera>()).orthographicSize = 35;
+		}
         OverviewCamera.SetActive(true);
 		if (Rec.LoadLap("fastlap"))
 		{
@@ -58,11 +67,11 @@ public class GameScript : MonoBehaviour {
 			mode = new string[1]{newMode};
 		}
 
-		AiInt.send_to_python = false;
 		AiInt.SenderClient.serverdown = true;
 		Recorder.sv_save_round = false;
 		CarCamera.SetActive (false);
 		MiniMapCamera.SetActive (false);
+		if (Consts.secondcamera) { MiniMapCam2.SetActive (false); }
 		OverviewCamera.SetActive (false);
 		Car.ResetCar (true);
 		Timing.ResetTiming ();
@@ -77,6 +86,7 @@ public class GameScript : MonoBehaviour {
 		if (mode.Contains("driving")) {
 			CarCamera.SetActive (true);
 			MiniMapCamera.SetActive (true);
+			if (Consts.secondcamera) { MiniMapCam2.SetActive (true); }
 		}
 
 		if (mode.Contains("train_AI")) {
@@ -84,7 +94,6 @@ public class GameScript : MonoBehaviour {
 		} 
 
 		if (mode.Contains("drive_AI")) {
-			AiInt.send_to_python = true;
 			AiInt.SenderClient.serverdown = false; 
 			AiInt.StartedAIMode ();
 		} 

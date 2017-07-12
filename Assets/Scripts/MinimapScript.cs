@@ -9,9 +9,9 @@ using UnityEngine.UI;
 
 public class MinimapScript : MonoBehaviour {
 
-	public Image pixel;
-	public Image pixel_clone;
-	public GameObject pixelParent;
+//	public Image pixel;
+//	public Image pixel_clone;
+//	public GameObject pixelParent;
 
 
 	void Start() {
@@ -19,7 +19,8 @@ public class MinimapScript : MonoBehaviour {
 	}
 
 
-	public float[,] GetVisionDisplay() {
+
+	public string GetVisionDisplay() {
 		Camera cam = gameObject.GetComponent<Camera> ();
 		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
 
@@ -42,56 +43,110 @@ public class MinimapScript : MonoBehaviour {
 
 			float displaywidth = 0.1f;
 			cam.targetTexture = null;
-			cam.rect = new Rect(0.88f, 0.64f, displaywidth, displaywidth/(0.5f*cam.aspect));
+			cam.rect = new Rect(0.88f, 0.6f, displaywidth, displaywidth/(0.5f*cam.aspect));
 
-			float[,] visiondisplay = new float[myImg.width, myImg.height];
+			// return imgToArray(myImg); dann müsste man danach noch TwoDImageToStr aufrufen, aber das ist sinnlos
+			return imgToStr(myImg);
 
-			for (int i = 0; i < myImg.width; i++) {
-				for (int j = 0; j < myImg.height; j++) {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8)
+		} catch (Exception e) {
+			UnityEngine.Debug.Log ("Flare renderer to update not found - in UnityEngine.Camera:Render()");
+			return "";
+		}
+	}
+
+
+
+	public static float[,] imgToArray(Texture2D myImg) {
+		float[,] visiondisplay = new float[myImg.width, myImg.height];
+
+		for (int i = 0; i < myImg.width; i++) {
+			for (int j = 0; j < myImg.height; j++) {
+				if (Consts.SeeCurbAsOff) {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
 						visiondisplay [i, j] = 1;
-					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4)
-						visiondisplay [i, j] = 0.5f;
-					else
+					else  											  //curb & off
+						visiondisplay [i, j] = 0;
+				} else {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+						visiondisplay [i, j] = 2;
+					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
+						visiondisplay [i, j] = 1;
+					else 											  //off
 						visiondisplay [i, j] = 0;
 				}
 			}
-			return visiondisplay;
-		} catch (Exception e) {
-			UnityEngine.Debug.Log ("Flare renderer to update not found - in UnityEngine.Camera:Render()");
-			return new float[1, 1];
 		}
+		return visiondisplay;
 	}
 
 
-	public void CreatePixelImage(Image pixel, GameObject pixelParent, int xlen, int ylen)
-	{
-		for (int i = 0; i<xlen*ylen; i++)
-		{
-			int x = i%xlen;
-			int y = i/xlen;
-			pixel_clone = (Image)Instantiate(pixel, new Vector3(0,0,0), Quaternion.identity, pixelParent.transform);
-			pixel_clone.rectTransform.localScale = new Vector3(1f,1f,1f);
-			pixel_clone.rectTransform.localPosition = new Vector3(-28.5f+x*2.0f,-40.5f+y*2.0f,0);
-			pixel_clone.name = "visPixel_"+x.ToString()+"_"+y.ToString();
-		}
-	}
 
-	public void ShowVisionDisplay(float[,] a)
-	{
-		for (int x = 0; x<a.GetLength(0); x++)
-		{
-			for (int y = 0; y<a.GetLength(1); y++)
-			{
-				float c = a[x,y];
-				Image currentPixel = GameObject.Find("visPixel_"+x.ToString()+"_"+y.ToString()).GetComponent<Image>();
-				currentPixel.color = new Color (c,c,c);
+	//Diese noch komplett machen, dafür die utnere twodarraytostr nutzen. Auch SeeCurbAsOff verwenden
+	public static string imgToStr(Texture2D myImg) {
+		
+		string alltext = "";
+		string currline = "";
+		for (int i = 0; i < myImg.width; i++) {
+			currline = "";
+			for (int j = 0; j < myImg.height; j++) {
+
+				if (Consts.SeeCurbAsOff) {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+						currline = currline + "1";
+					else  											  //curb & off
+						currline = currline + "0";
+				} else {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+						currline = currline + "2";
+					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
+						currline = currline + "1";
+					else 											  //off
+						currline = currline + "0";
+				}
 			}
+			//clinenr = ParseIntBase3 (currline);
+			//alltext = alltext + clinenr.ToString("X") + ",";
+			alltext = alltext + currline + ",";
 		}
+		return alltext;
+
 	}
 
 
 
+
+
+
+
+
+
+
+//  Old way of prining the visiondisplay
+//	public void CreatePixelImage(Image pixel, GameObject pixelParent, int xlen, int ylen)
+//	{
+//		for (int i = 0; i<xlen*ylen; i++)
+//		{
+//			int x = i%xlen;
+//			int y = i/xlen;
+//			pixel_clone = (Image)Instantiate(pixel, new Vector3(0,0,0), Quaternion.identity, pixelParent.transform);
+//			pixel_clone.rectTransform.localScale = new Vector3(1f,1f,1f);
+//			pixel_clone.rectTransform.localPosition = new Vector3(-28.5f+x*2.0f,-40.5f+y*2.0f,0);
+//			pixel_clone.name = "visPixel_"+x.ToString()+"_"+y.ToString();
+//		}
+//	}
+//
+//	public void ShowVisionDisplay(float[,] a)
+//	{
+//		for (int x = 0; x<a.GetLength(0); x++)
+//		{
+//			for (int y = 0; y<a.GetLength(1); y++)
+//			{
+//				float c = a[x,y];
+//				Image currentPixel = GameObject.Find("visPixel_"+x.ToString()+"_"+y.ToString()).GetComponent<Image>();
+//				currentPixel.color = new Color (c,c,c);
+//			}
+//		}
+//	}
 
 
 }
