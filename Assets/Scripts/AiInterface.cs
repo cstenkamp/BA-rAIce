@@ -4,20 +4,21 @@
 /// </summary>
 using UnityEngine;
 using System.Collections;
-
 using System;
 using System.Threading;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
-
+//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 200; //minimally 50, aka 20 FPS
-	public const int MAXAGEPYTHONRESULT = 150;
-	public const int CREATE_VECS_ALL = 25;       //TODO: these need to scale up with the game speed!
-	public const bool UPDATE_ONLY_IF_NEW = false; //assert dass die gleich der von python ist
+	public const int updatepythonintervalms = 100;  //multiples of 25
+	public const int MAXAGEPYTHONRESULT = 150;     //this uses realtime, in constrast to all other time-dependent stuff
+	public const int CREATE_VECS_ALL = 25;         
+	public const bool UPDATE_ONLY_IF_NEW = false;  //TODO: assert dass die gleich der von python ist
+	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -36,7 +37,6 @@ public static class Consts { //TODO: diese hier an python schicken!
 }
 
 //================================================================================
-
 
 public class AiInterface : MonoBehaviour {
 
@@ -59,9 +59,9 @@ public class AiInterface : MonoBehaviour {
 	public GameObject posMarker4;
 
 	//for sending to python
-	public long lastpythonupdate =  Environment.TickCount;
-	public long lastpythonresult =  Environment.TickCount;
-	public long lastgetvectortime = Environment.TickCount;
+	public long lastpythonupdate;
+	public long lastpythonresult;
+	public long lastgetvectortime;
 	public string lastpythonsent;
 
 	public float nn_steer = 0;
@@ -76,17 +76,26 @@ public class AiInterface : MonoBehaviour {
 
 	//=============================================================================
 
+	public static long MSTime() {
+		return DateTime.UtcNow.Ticks;
+	}
+
+	public static long UnityTime() {
+		return (long)(Time.time * 1000);
+	}
+
+
 	// Use this for initialization
 	void Start () {
+		lastpythonupdate =  UnityTime();
+		lastpythonresult =  UnityTime();
+		lastgetvectortime = UnityTime();	
 		StartedAIMode ();
 	}
 
 
 	public void StartedAIMode() {
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
-			lastpythonupdate =  Environment.TickCount;
-			lastpythonresult =  Environment.TickCount; //keinen schimmer warum es nicht reicht sie oben außerhalb von function zu setten.
-			lastgetvectortime = Environment.TickCount;	
 			UnityEngine.Debug.Log ("Started AI Mode");
 			SendToPython ("resetServer", true);
 			ConnectAsReceiver ();
@@ -136,7 +145,7 @@ public class AiInterface : MonoBehaviour {
 
 	void FixedUpdate() {
 
-		//SENDING the already prepared (every CREATE_VECS_ALL/25 ms) data to python (all updatepythonintervalms/200 ms)
+		//SENDING the already prepared (every CREATE_VECS_ALL/25 ms, in Update) data to python (all updatepythonintervalms/200 ms)
 		if (Game.mode.Contains("drive_AI")) {
 			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
 		}
@@ -144,7 +153,7 @@ public class AiInterface : MonoBehaviour {
 		//RECEIVING the result from python
 		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
 			string message;
-			if (Environment.TickCount - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
+			if (MSTime() - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
 			{
 				message = ReceiverClient.response.pedals;
 			} else { 
@@ -176,12 +185,10 @@ public class AiInterface : MonoBehaviour {
 
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		long currtime = Environment.TickCount;
-
-		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
+		long currtime = UnityTime();
+		if (((currtime - lastgetvectortime >= Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
+			lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
 			lastpythonsent = GetAllInfos ();
-			//ASDF UnityEngine.Debug.Log ();
-			lastgetvectortime = currtime;
 		} 
 		return lastpythonsent;
 	}
@@ -220,38 +227,39 @@ public class AiInterface : MonoBehaviour {
 		//	   V1: VisionVector1 (converted to decimal)
 		//	   V2: VisionVector2 (converted to decimal) (if needed)
 		//		R: Progress as a vector (rounded to 4) 
-		//  CTime: CreationTime of Vector (Not send-time)
+		//  CTime: CreationTime of Vector (Not send-time) (this one is in Unity-Time only! The STime will be in real time)
 
-		string all = ""; 
+		StringBuilder all = new StringBuilder(1900);
 
-		all += "CTime(" + Environment.TickCount.ToString () + ")";
+		all.Append ("CTime("); all.Append (UnityTime().ToString()); all.Append (")");
 
-		all += "P("+(Math.Round(Tracking.progress * 100.0f ,3)).ToString () +","+ Math.Round(Car.Timing.currentLapTime,2).ToString() +","+ Car.Timing.lapCount.ToString() +","+ Car.lapClean.ToString()[0] +")";
+		all.Append ("P("); all.Append (Math.Round(Tracking.progress * 100.0f ,3).ToString ()); all.Append(","); all.Append (Math.Round (Car.Timing.currentLapTime, 2).ToString ()); all.Append (","); all.Append (Car.Timing.lapCount.ToString ()); all.Append (","); all.Append (Car.lapClean.ToString () [0]); all.Append (")");
 
-		all += "S(" + string.Join (",", GetSpeedSteer ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all.Append ("S("); all.Append (string.Join (",", GetSpeedSteer ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
 
-		all += "T(" + string.Join (",", GetCarStatusVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all.Append ("T("); all.Append (string.Join (",", GetCarStatusVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
 
 		float tmp = Tracking.GetCenterDist ();
 		if (just_hit_wall) 
 			tmp = 11; //10 ist die distanz der mauer, aber da er ja direkt resettet weiß er es anderenfalls nicht mehr
-		all += "C("+ Math.Round(tmp,3).ToString() + "," + string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all.Append ("C("); all.Append (Math.Round(tmp,3).ToString()); all.Append (","); all.Append (string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ())); all.Append (")");
 
-		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
+		all.Append ("L("); all.Append (string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
 
-		all += "D(" + Math.Round(Rec.GetDelta(), 2).ToString() +","+ Math.Round(Rec.GetFeedback(), 2).ToString() + ")";
+		all.Append ("D("); all.Append (Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ());  all.Append (")");
 
-		all += "V1(" + Minmap.GetVisionDisplay () + ")";
+		all.Append ("V1("); all.Append (Minmap.GetVisionDisplay ()); all.Append (")");
 
 		if (Consts.secondcamera)
-			all += "V2(" + Minmap2.GetVisionDisplay () + ")"; //TODO //ASDF
+			all.Append ("V2("); all.Append (Minmap2.GetVisionDisplay ()); all.Append (")");
 
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		//TODO: gucken welche vektoren ich brauche
 		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
-		return all;
+
+		return all.ToString ();
 	}
 
 
@@ -461,17 +469,17 @@ public class AiInterface : MonoBehaviour {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
-			data = "STime(" + Environment.TickCount.ToString () + ")" + data;
+			data = "STime(" + MSTime() + ")" + data;
 		}
 
-		long currtime = Environment.TickCount;
-		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
+		long currtime = UnityTime();
+		if ((currtime - lastpythonupdate >= Consts.updatepythonintervalms) || (force)) {
+			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms;
 			if (data != "resetServer")
 				just_hit_wall = false;
 			
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
-			lastpythonupdate = currtime;
 		}
 	}
 

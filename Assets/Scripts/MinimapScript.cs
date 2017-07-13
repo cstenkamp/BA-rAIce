@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Text;
 
 using UnityEngine.UI;
 
@@ -12,11 +13,6 @@ public class MinimapScript : MonoBehaviour {
 //	public Image pixel;
 //	public Image pixel_clone;
 //	public GameObject pixelParent;
-
-
-	void Start() {
-
-	}
 
 
 
@@ -59,32 +55,42 @@ public class MinimapScript : MonoBehaviour {
 	//Diese noch komplett machen, dafür die utnere twodarraytostr nutzen. Auch SeeCurbAsOff verwenden
 	public static string imgToStr(Texture2D myImg) {
 
-		string alltext = "";
-		string currline = "";
-		for (int i = 0; i < myImg.width; i++) {
-			currline = "";
-			for (int j = 0; j < myImg.height; j++) {
+		StringBuilder alltext = new StringBuilder((Consts.visiondisplay_x*Consts.visiondisplay_y)+Consts.visiondisplay_x); //letztes für die kommas
+		StringBuilder currline = new StringBuilder(Consts.visiondisplay_y);
 
-				if (Consts.SeeCurbAsOff) {
+		if (Consts.SeeCurbAsOff) {
+			
+			for (int i = 0; i < myImg.width; i++) {
+				currline = new StringBuilder(Consts.visiondisplay_y);
+				for (int j = 0; j < myImg.height; j++) {
 					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						currline = currline + "1";
+						currline.Append("1");
 					else  											  //curb & off
-						currline = currline + "0";
-				} else {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						currline = currline + "2";
-					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
-						currline = currline + "1";
-					else 											  //off
-						currline = currline + "0";
+						currline.Append("0");
 				}
+				//clinenr = ParseIntBase3 (currline);
+				//alltext = alltext + clinenr.ToString("X") + ",";
+				alltext.Append(currline+",");
 			}
-			//clinenr = ParseIntBase3 (currline);
-			//alltext = alltext + clinenr.ToString("X") + ",";
-			alltext = alltext + currline + ",";
-		}
-		return alltext;
 
+		} else {
+			
+			for (int i = 0; i < myImg.width; i++) {
+				currline = new StringBuilder(Consts.visiondisplay_y);
+				for (int j = 0; j < myImg.height; j++) {
+					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+						currline.Append("2");
+					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
+						currline.Append("1");
+					else 											  //off
+						currline.Append("0");
+				}
+				//clinenr = ParseIntBase3 (currline);
+				//alltext = alltext + clinenr.ToString("X") + ",";
+				alltext.Append(currline+",");
+			}
+		}
+		return alltext.ToString();
 	}
 
 

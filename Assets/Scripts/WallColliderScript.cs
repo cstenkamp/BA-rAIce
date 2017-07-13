@@ -45,7 +45,7 @@ public class WallColliderScript : MonoBehaviour {
 			} catch (IndexOutOfRangeException) {
 				Angle = Quaternion.AngleAxis(180+Pos.absoluteAnchorAngles[0], Vector3.up); 
 			}
-			Timing.PunishTime (TIMEPUNISH);
+			Timing.PunishTime(TIMEPUNISH);
 			Car.ResetToPosition (Position, Angle, Consts.debug_makevalidafterwallhit, false); //letzte false, weil python bei nem Wallhit eben nicht resetten soll sondern wissen was den hit verursacht hat
 			AiInt.punish_wallhit (); 
 		}

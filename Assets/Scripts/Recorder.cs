@@ -30,17 +30,17 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
-	private int lasttrack = Environment.TickCount;
+	//private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
+	private float lasttrack = 0;
 
 
 
 	void FixedUpdate() {
 		if (sv_save_round) {
-			int currtime = Environment.TickCount;
-			if (currtime - lasttrack > trackAllXMS) {
+			long currtime = AiInterface.UnityTime();
+			if (currtime - lasttrack >= Consts.trackAllXMS) {
+				lasttrack = lasttrack + Consts.trackAllXMS; 
 				SVLearnUpdateList ();
-				lasttrack = currtime;
 			}
 		}
 	}
@@ -65,7 +65,8 @@ public class Recorder : MonoBehaviour {
 
 		if (sv_save_round) { 
 			SVLearnLap = new List<TrackingPoint> ();
-			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, AiInt.load_infos(false,true), (int) Mathf.Round(Car.velocity))); 
+			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
+			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, data, (int) Mathf.Round(Car.velocity))); 
 		}
 	}
 
@@ -79,7 +80,8 @@ public class Recorder : MonoBehaviour {
 	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
 	public void SVLearnUpdateList(){
 		if (sv_save_round) {
-			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, AiInt.load_infos(false,true), (int) Mathf.Round(Car.velocity)));
+			string data = "STime(" + AiInterface.MSTime ().ToString () + ")" + AiInt.load_infos (false, false);
+			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, data, (int) Mathf.Round(Car.velocity)));
 		}
 	}
 
@@ -95,14 +97,15 @@ public class Recorder : MonoBehaviour {
 		}
 
 		if (sv_save_round) {
-			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, AiInt.load_infos (false, true), (int) Mathf.Round(Car.velocity)));
+			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
+			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, data, (int) Mathf.Round(Car.velocity)));
 			string whodrove;
 			if (Car.Game.mode.Contains ("keyboarddriving")) {
 				whodrove = "_human";
 			} else {
 				whodrove = "_AI";
 			}
-			SaveSVLearnLapStart (SVLearnLap, "complete_" + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__"  + Math.Round((Timing.lastLapTime*10)).ToString() + whodrove); 
+			SaveSVLearnLapStart (SVLearnLap, "complete_" + (Consts.secondcamera ? "2cam_" : "1cam_") + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__"  + Math.Round((Timing.lastLapTime*10)).ToString() + whodrove); 
 		}
 	}
 
@@ -171,18 +174,20 @@ public class Recorder : MonoBehaviour {
 	public void SaveSVLearnLapStart(List<TrackingPoint> SVLearnLap, string fileName) 
 	{
 		if (sv_save_round) {
-			var t = new Thread (() => SaveSVLearnLap (SVLearnLap, fileName)); 
+			int size1 = (int)((Camera)Car.Game.MiniMapCamera.GetComponent<Camera> ()).orthographicSize;
+			int size2 = Consts.secondcamera ? (int)((Camera)Car.Game.MiniMapCam2.GetComponent<Camera> ()).orthographicSize : 0; 
+			var t = new Thread (() => SaveSVLearnLap (SVLearnLap, fileName, size1, size2)); 
 			t.Start ();
 		}
 	}
 
-	public void SaveSVLearnLap(List<TrackingPoint> SVLearnLap, string fileName) 
+	public void SaveSVLearnLap(List<TrackingPoint> SVLearnLap, string fileName, int size1, int size2) 
 	{
 		if (sv_save_round) {
 			if (!Directory.Exists ("SavedLaps/")) {
 				Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
 			} else {
-				TPMitInfoList tpl = new TPMitInfoList (SVLearnLap, trackAllXMS, DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss"), Timing.lastLapTime, fileName);
+				TPMitInfoList tpl = new TPMitInfoList (SVLearnLap, Consts.trackAllXMS, DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss"), Timing.lastLapTime, fileName, size1, size2);
 				System.Xml.Serialization.XmlSerializer xs = new System.Xml.Serialization.XmlSerializer (tpl.GetType ());
 				FileStream file = File.Create ("SavedLaps/" + fileName + ".svlap");
 				xs.Serialize (file, tpl);
@@ -269,13 +274,17 @@ public class TPMitInfoList
 	public string time;
 	public float tookTime;
 	public string filename;
+	public int firstCamSize;
+	public int secondCamSize;
 	public TPMitInfoList() {}
-	public TPMitInfoList(List<TrackingPoint> tpl, int taxm, string t, float tt, string fn) 
+	public TPMitInfoList(List<TrackingPoint> tpl, int taxm, string t, float tt, string fn, int fcs, int scs) 
 	{
 		TPList = tpl;
 		trackAllXMS = taxm;
 		time = t;
 		tookTime = tt;
 		filename = fn;
+		firstCamSize = fcs;
+		secondCamSize = scs;
 	}
 }

@@ -17,6 +17,7 @@ public class GameScript : MonoBehaviour {
 	public UIScript UserInterface;
 	public AiInterface AiInt;
 
+
 	// Use this for initialization
 	void Start ()
 	{
@@ -27,8 +28,11 @@ public class GameScript : MonoBehaviour {
 		if (!Consts.secondcamera) { 
 			((Camera)MiniMapCam2.GetComponent<Camera>()).enabled = false;	
 			((Camera)MiniMapCamera.GetComponent<Camera>()).orthographicSize = 57;
+			MiniMapCamera.transform.localPosition= new Vector3 (MiniMapCamera.transform.localPosition.x, MiniMapCamera.transform.localPosition.y, 50);
 		} else {
 			((Camera)MiniMapCamera.GetComponent<Camera>()).orthographicSize = 75;
+			MiniMapCam2.transform.localPosition= new Vector3 (MiniMapCam2.transform.localPosition.x, MiniMapCam2.transform.localPosition.y, 28);
+			MiniMapCamera.transform.localPosition= new Vector3 (MiniMapCamera.transform.localPosition.x, MiniMapCamera.transform.localPosition.y, 63);
 			((Camera)MiniMapCam2.GetComponent<Camera>()).orthographicSize = 35;
 		}
         OverviewCamera.SetActive(true);

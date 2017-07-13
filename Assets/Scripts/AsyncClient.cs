@@ -276,17 +276,16 @@ public class AsynchronousClient {  //updating python's value should happen async
 			try {
 				if (newstr.Substring (0, 1) != "[") {
 					if (othercommand == false) 
-						timestampReceive = Environment.TickCount;
+						timestampReceive = AiInterface.MSTime();
 					othercommand = true;
 					if (newstr.IndexOf("Time(") > 0) {
 						newstr = newstr.Substring(0, newstr.IndexOf("Time("));
 					}
 					command = newstr;
 				} else {
-
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
 					timestampStarted = (long) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
-					timestampReceive = (long) Environment.TickCount;
+					timestampReceive = (long) AiInterface.MSTime();
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {

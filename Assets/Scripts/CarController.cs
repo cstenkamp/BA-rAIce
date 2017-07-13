@@ -249,7 +249,7 @@ public class CarController : MonoBehaviour {
 	}
 
 	public void ResetCar(bool send_python) {
-		UnityEngine.Debug.Log ("Car resettet" + Environment.TickCount.ToString ());
+		UnityEngine.Debug.Log ("Car resettet" + DateTime.Now.ToString());
 		ResetToPosition (startPosition, startRotation, false, send_python);
 	}
 
@@ -443,6 +443,7 @@ public class CarController : MonoBehaviour {
 
 
 	void OnGUI () {
+		GUI.Label(new Rect(0, 0, 100, 100), ((int)(1.0f / Time.smoothDeltaTime)).ToString());        
 		if (ShowThisGUI) {
 			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
 			myRT.Create ();

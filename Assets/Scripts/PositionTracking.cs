@@ -46,7 +46,7 @@ public class PositionTracking : MonoBehaviour {
 		absoluteAnchorAngles = GetAbsoluteAnchorAngles(segmentAngles);
 		anchorProgress = GetAbsoluteAnchorProgress(anchorVector);
 		trackLength = segmentLengths.Sum();
-		lastRightDirectionTime = Environment.TickCount;
+		lastRightDirectionTime = AiInterface.UnityTime();
 
 		if (Consts.debug_showanchors)
 			ShowAnchors(anchorVector, anchorPrototype, countText, "absoluteAngles"); // for debugging
@@ -72,10 +72,10 @@ public class PositionTracking : MonoBehaviour {
 		}
 
 		if ((lastFrameProgress <= progress) || (Quaternion.Angle(Angle, Car.transform.rotation) < 100)) {
-			lastRightDirectionTime = Environment.TickCount;
+			lastRightDirectionTime = AiInterface.UnityTime();
 		}
 
-		if (Environment.TickCount - lastRightDirectionTime > 500) {
+		if (AiInterface.UnityTime() - lastRightDirectionTime >= 500) {
 			//UnityEngine.Debug.Log ("Wrong Direction!");
 			rightDirection = false;
 		} else {

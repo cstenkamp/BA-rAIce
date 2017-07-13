@@ -126,6 +126,8 @@ public class UIScript : MonoBehaviour {
 		menuSelection = 0;
 		drivingOverlayActive = true;
 	}
+
+
 	
 	// Update is called once per frame
 	void Update ()
