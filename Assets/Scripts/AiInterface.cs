@@ -31,7 +31,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
-	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool secondcamera = false; //the sizes of the cameras are set in the Start() of GameScript
 	public const bool SeeCurbAsOff = true;
 }
 
@@ -216,10 +216,10 @@ public class AiInterface : MonoBehaviour {
 		//		T: CarStatusVec  (rounded to 4)
 		//		C: CenterDistVec (rounded to 4)
 		//		L: LookAheadVec  (rounded to 4)
+		//		D: Delta & Feedback
 		//	   V1: VisionVector1 (converted to decimal)
 		//	   V2: VisionVector2 (converted to decimal) (if needed)
 		//		R: Progress as a vector (rounded to 4) 
-		//		D: Delta & Feedback
 		//  CTime: CreationTime of Vector (Not send-time)
 
 		string all = ""; 
@@ -239,14 +239,14 @@ public class AiInterface : MonoBehaviour {
 
 		all += "L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
+		all += "D(" + Math.Round(Rec.GetDelta(), 2).ToString() +","+ Math.Round(Rec.GetFeedback(), 2).ToString() + ")";
+
 		all += "V1(" + Minmap.GetVisionDisplay () + ")";
 
 		if (Consts.secondcamera)
 			all += "V2(" + Minmap2.GetVisionDisplay () + ")"; //TODO //ASDF
 
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
-
-		all += "D(" + Math.Round(Rec.GetDelta(), 2).ToString() +","+ Math.Round(Rec.GetFeedback(), 2).ToString() + ")";
 
 		//TODO: gucken welche vektoren ich brauche
 		//TODO: klären ob ich den Progress als number oder als vector brauche

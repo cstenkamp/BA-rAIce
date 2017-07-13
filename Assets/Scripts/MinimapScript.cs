@@ -56,34 +56,9 @@ public class MinimapScript : MonoBehaviour {
 
 
 
-	public static float[,] imgToArray(Texture2D myImg) {
-		float[,] visiondisplay = new float[myImg.width, myImg.height];
-
-		for (int i = 0; i < myImg.width; i++) {
-			for (int j = 0; j < myImg.height; j++) {
-				if (Consts.SeeCurbAsOff) {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						visiondisplay [i, j] = 1;
-					else  											  //curb & off
-						visiondisplay [i, j] = 0;
-				} else {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						visiondisplay [i, j] = 2;
-					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
-						visiondisplay [i, j] = 1;
-					else 											  //off
-						visiondisplay [i, j] = 0;
-				}
-			}
-		}
-		return visiondisplay;
-	}
-
-
-
 	//Diese noch komplett machen, dafür die utnere twodarraytostr nutzen. Auch SeeCurbAsOff verwenden
 	public static string imgToStr(Texture2D myImg) {
-		
+
 		string alltext = "";
 		string currline = "";
 		for (int i = 0; i < myImg.width; i++) {
@@ -114,6 +89,29 @@ public class MinimapScript : MonoBehaviour {
 
 
 
+
+//	public static float[,] imgToArray(Texture2D myImg) {
+//		float[,] visiondisplay = new float[myImg.width, myImg.height];
+//
+//		for (int i = 0; i < myImg.width; i++) {
+//			for (int j = 0; j < myImg.height; j++) {
+//				if (Consts.SeeCurbAsOff) {
+//					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+//						visiondisplay [i, j] = 1;
+//					else  											  //curb & off
+//						visiondisplay [i, j] = 0;
+//				} else {
+//					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+//						visiondisplay [i, j] = 2;
+//					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
+//						visiondisplay [i, j] = 1;
+//					else 											  //off
+//						visiondisplay [i, j] = 0;
+//				}
+//			}
+//		}
+//		return visiondisplay;
+//	}
 
 
 

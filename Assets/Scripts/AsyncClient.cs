@@ -285,8 +285,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 				} else {
 
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
-					timestampStarted = (int) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-6 ));
-					timestampReceive = Environment.TickCount;
+					timestampStarted = (long) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
+					timestampReceive = (long) Environment.TickCount;
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {
