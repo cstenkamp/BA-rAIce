@@ -274,6 +274,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 		public void update(String newstr){
 			try {
+				UnityEngine.Debug.Log ("RECEIVING TIME: " + timestampStarted + " @ " + AiInterface.MSTime ());
 				if (newstr.Substring (0, 1) != "[") {
 					if (othercommand == false) 
 						timestampReceive = AiInterface.MSTime();

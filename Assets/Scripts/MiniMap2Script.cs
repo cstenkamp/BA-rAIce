@@ -2,21 +2,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 
 
 public class MiniMap2Script : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+	public GameScript Game;
 
 	public string GetVisionDisplay() {
+		if (!(Game.mode.Contains ("drive_AI")) && !(Game.mode.Contains ("train_AI"))) {
+			return "";
+		}
+		
 		Camera cam = gameObject.GetComponent<Camera> ();
 		if (cam.enabled) {
 

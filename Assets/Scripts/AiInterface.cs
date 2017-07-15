@@ -10,15 +10,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
+
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 100;  //multiples of 25
+	public const int updatepythonintervalms = 200;  //multiples of 25
 	public const int MAXAGEPYTHONRESULT = 150;     //this uses realtime, in constrast to all other time-dependent stuff
 	public const int CREATE_VECS_ALL = 25;         
-	public const bool UPDATE_ONLY_IF_NEW = false;  //TODO: assert dass die gleich der von python ist
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
+	public const bool fixedresultusagetime = true;
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -32,8 +32,8 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
-	public const bool secondcamera = false; //the sizes of the cameras are set in the Start() of GameScript
-	public const bool SeeCurbAsOff = true;
+	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool SeeCurbAsOff = false;
 }
 
 //================================================================================
@@ -63,6 +63,8 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythonresult;
 	public long lastgetvectortime;
 	public string lastpythonsent;
+	public Vector3 lastCarPos;
+	public Quaternion lastCarRot;
 
 	public float nn_steer = 0;
 	public float nn_brake = 0;
@@ -77,7 +79,8 @@ public class AiInterface : MonoBehaviour {
 	//=============================================================================
 
 	public static long MSTime() {
-		return DateTime.UtcNow.Ticks;
+		//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
+		return ((long)(DateTime.UtcNow.Ticks/10000)) % 1000000; //there are 10000ticks in a ms
 	}
 
 	public static long UnityTime() {
@@ -87,6 +90,7 @@ public class AiInterface : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+		//Time.fixedDeltaTime = (10.0f)/ 1000; //TODO war mal CREATE_VECS_ALL
 		lastpythonupdate =  UnityTime();
 		lastpythonresult =  UnityTime();
 		lastgetvectortime = UnityTime();	
@@ -103,12 +107,8 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	// Update is called once per frame, and doesn't let the actual game wait (and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here)
-	// In Update the infos are LOADed, if CREATE_VECS_ALL/25 ms passed.
+	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
-		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
-			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
-		}
 		if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
 			if ((Game.mode.Contains ("drive_AI")) && !HumanTakingControl)
 				Car.UnQuickPause ();
@@ -143,11 +143,19 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
+	//fixedupdate is run every physics-timestep, which is independent of framerate.
 	void FixedUpdate() {
+		
+		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
+			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
+		}
+
+
+
 
 		//SENDING the already prepared (every CREATE_VECS_ALL/25 ms, in Update) data to python (all updatepythonintervalms/200 ms)
 		if (Game.mode.Contains("drive_AI")) {
-			SendToPython (load_infos (false, Consts.UPDATE_ONLY_IF_NEW), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
+			SendToPython (load_infos (false, true), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
 		}
 
 		//RECEIVING the result from python
@@ -186,6 +194,11 @@ public class AiInterface : MonoBehaviour {
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
 		long currtime = UnityTime();
+
+//		Vector3 pos = Car.Car.position;
+//		Quaternion rot = Car.Car.rotation;
+//
+//		if (pos != lastCarPos || rot != lastCarRot) {
 		if (((currtime - lastgetvectortime >= Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 			lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
 			lastpythonsent = GetAllInfos ();
@@ -194,21 +207,6 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-//not quite necessary anymore, this function
-//	private string TwoDArrayToStr(float[,] array) {
-//		string alltext = "";
-//		string currline = "";
-//		for (int i = 0; i < array.GetLength (0); i++) {
-//			currline = "";
-//			for (int j = 0; j < array.GetLength (1); j++) {
-//				currline = currline + (array [i, j]).ToString();
-//			}
-//			//clinenr = ParseIntBase3 (currline);
-//			//alltext = alltext + clinenr.ToString("X") + ",";
-//			alltext = alltext + currline.ToString() + ",";
-//		}
-//		return alltext;
-//	}
 
 
 	//================================================================================
@@ -477,7 +475,7 @@ public class AiInterface : MonoBehaviour {
 			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms;
 			if (data != "resetServer")
 				just_hit_wall = false;
-			
+			UnityEngine.Debug.Log ("SENDING TIME: " + MSTime ());
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
 		}

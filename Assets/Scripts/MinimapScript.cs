@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using System.Text;
+using System.Linq;
 
 using UnityEngine.UI;
 
@@ -14,9 +15,13 @@ public class MinimapScript : MonoBehaviour {
 //	public Image pixel_clone;
 //	public GameObject pixelParent;
 
-
+	public GameScript Game;
 
 	public string GetVisionDisplay() {
+		if (!(Game.mode.Contains ("drive_AI")) && !(Game.mode.Contains ("train_AI"))) {
+			return "";
+		}
+
 		Camera cam = gameObject.GetComponent<Camera> ();
 		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
 

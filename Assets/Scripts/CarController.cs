@@ -59,7 +59,8 @@ public class CarController : MonoBehaviour {
 	}
 
 
-	// Update is called once per frame
+	// Update is called once per frame, and doesn't depend on TimeScale
+	// FixedUpdate may be called > once per frame, depends on timeScale, its the place for physics calculation etc
 	void FixedUpdate ()
 	{
 		if (Game.mode.Contains ("driving")) {
@@ -158,7 +159,7 @@ public class CarController : MonoBehaviour {
 			if (Game.mode.Contains ("driving")) {
 				QuickPause ();
 			} else {
-				UnQuickPause ();
+				UnQuickPause (); 
 			}
 		}
 
@@ -171,7 +172,6 @@ public class CarController : MonoBehaviour {
 				}
 			}
 
-			//TODO: shouldn't this part here be in FixedUpdate? @Leon
 			// wheels rotation
 			transformFL.Rotate(colliderFL.rpm/60*360*Time.deltaTime,0,0);
 			transformFR.Rotate(colliderFR.rpm/60*360*Time.deltaTime,0,0);
@@ -191,7 +191,7 @@ public class CarController : MonoBehaviour {
 			Quaternion FLrot;
 			colliderFL.GetWorldPose(out FLpos, out FLrot);
 			Vector3 tmpPosFL = transformFL.transform.position;
-			tmpPosFL.y = FLpos.y;
+			tmpPosFL = FLpos;
 			transformFL.position = tmpPosFL;
 
 			// wheel height FR
@@ -199,7 +199,7 @@ public class CarController : MonoBehaviour {
 			Quaternion FRrot;
 			colliderFR.GetWorldPose(out FRpos, out FRrot);
 			Vector3 tmpPosFR = transformFR.transform.position;
-			tmpPosFR.y = FRpos.y;
+			tmpPosFR = FRpos;
 			transformFR.position = tmpPosFR;
 
 			// wheel height RL
@@ -207,7 +207,7 @@ public class CarController : MonoBehaviour {
 			Quaternion RLrot;
 			colliderRL.GetWorldPose(out RLpos, out RLrot);
 			Vector3 tmpPosRL = transformRL.transform.position;
-			tmpPosRL.y = RLpos.y;
+			tmpPosRL = RLpos;
 			transformRL.position = tmpPosRL;
 
 			// wheel height RR
@@ -215,9 +215,8 @@ public class CarController : MonoBehaviour {
 			Quaternion RRrot;
 			colliderRR.GetWorldPose(out RRpos, out RRrot);
 			Vector3 tmpPosRR = transformRR.transform.position;
-			tmpPosRR.y = RRpos.y;
+			tmpPosRR = RRpos;
 			transformRR.position = tmpPosRR;
-			//this part here end
 
 		}
 

@@ -97,7 +97,7 @@ public class Recorder : MonoBehaviour {
 		}
 
 		if (sv_save_round) {
-			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
+			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false	, false);
 			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, data, (int) Mathf.Round(Car.velocity)));
 			string whodrove;
 			if (Car.Game.mode.Contains ("keyboarddriving")) {
