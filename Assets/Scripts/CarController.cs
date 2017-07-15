@@ -283,7 +283,7 @@ public class CarController : MonoBehaviour {
 
 		// send to python that stuff changed
 		if (send_python) {
-			AiInt.SendToPython ("resetServer", true);
+			AiInt.SendToPython ("resetServer");
 		}
 
 		if (make_valid && Timing.lapCount > 0)
@@ -297,7 +297,7 @@ public class CarController : MonoBehaviour {
 		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
 
 
-		AiInt.SendToPython ("reset", true);
+		AiInt.SendToPython ("reset");
 	}
 
 

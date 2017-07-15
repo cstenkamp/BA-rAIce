@@ -148,6 +148,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			if (e is ObjectDisposedException || e is SocketException || e is NullReferenceException) {
 				//etabliere NEUE verbindung, die daten müssen schließlich rüber!
 				StartClientSocket (); //overwrites the old "socket"
+				AiInterface.print("This shouldnd happen too often deleteme");
 				Send (socket, data);  
 			} else {
 				UnityEngine.Debug.Log(e.ToString());
@@ -171,6 +172,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			int bytesSent = client.EndSend(ar);  
 			//UnityEngine.Debug.Log("Sent {0} bytes to server.", bytesSent);  
 			sendDone.Set();  
+			AiInterface.print(AiInterface.MSTime() + "Some sending done");
 		} catch (Exception) {  
 			throw;
 		}  

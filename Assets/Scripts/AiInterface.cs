@@ -16,7 +16,6 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 200;  //multiples of 25
 	public const int MAXAGEPYTHONRESULT = 150;     //this uses realtime, in constrast to all other time-dependent stuff
-	public const int CREATE_VECS_ALL = 25;         
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const bool fixedresultusagetime = true;
 
@@ -101,7 +100,7 @@ public class AiInterface : MonoBehaviour {
 	public void StartedAIMode() {
 		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
 			UnityEngine.Debug.Log ("Started AI Mode");
-			SendToPython ("resetServer", true);
+			SendToPython ("resetServer");
 			ConnectAsReceiver ();
 		}
 	}
@@ -137,7 +136,7 @@ public class AiInterface : MonoBehaviour {
 
 	public void punish_wallhit() {
 		if (Game.mode.Contains ("drive_AI")) {
-			SendToPython ("wallhit", true); //ist das doppelt gemoppelt?
+			SendToPython ("wallhit"); //ist das doppelt gemoppelt?
 			just_hit_wall = true;
 		}
 	}
@@ -145,17 +144,9 @@ public class AiInterface : MonoBehaviour {
 
 	//fixedupdate is run every physics-timestep, which is independent of framerate.
 	void FixedUpdate() {
-		
-		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
-			load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
-		}
-
-
-
-
-		//SENDING the already prepared (every CREATE_VECS_ALL/25 ms, in Update) data to python (all updatepythonintervalms/200 ms)
+		//SENDING the already prepared data to python (all updatepythonintervalms/200 ms)
 		if (Game.mode.Contains("drive_AI")) {
-			SendToPython (load_infos (false, true), false);  //die ist ein einzelner thread, also ruhig in fixedupdate.   (-> wenn not ONLY_UPDATE_IF_NEW, ODER wenn eh neu, DANN Sendet er!!
+			LoadAndSendInfosToPython();  
 		}
 
 		//RECEIVING the result from python
@@ -191,22 +182,25 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
-
+	//difference in this function: it reloads if there is a reason to. Position and Rotation are basically the hash.
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		long currtime = UnityTime();
-
-//		Vector3 pos = Car.Car.position;
-//		Quaternion rot = Car.Car.rotation;
-//
-//		if (pos != lastCarPos || rot != lastCarRot) {
-		if (((currtime - lastgetvectortime >= Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
-			lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
-			lastpythonsent = GetAllInfos ();
+		Vector3 pos = Car.Car.position;
+		Quaternion rot = Car.Car.rotation;
+		if (((pos != lastCarPos || rot != lastCarRot) || force_reload) && !forbid_reload) {
+			string tmp = GetAllInfos ();
+			if (tmp.Length != 0) {
+				lastCarPos = pos;
+				lastCarRot = rot;
+				lastpythonsent = tmp;
+				return lastpythonsent;
+			}
 		} 
-		return lastpythonsent;
+		return ""; //wenn die sich nicht verändert hat, sollste nix sagen.
 	}
 
-
+	public static void print(string str) {
+		UnityEngine.Debug.Log (str);
+	}
 
 
 	//================================================================================
@@ -246,7 +240,8 @@ public class AiInterface : MonoBehaviour {
 
 		all.Append ("D("); all.Append (Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ());  all.Append (")");
 
-		all.Append ("V1("); all.Append (Minmap.GetVisionDisplay ()); all.Append (")");
+		string visiondisp = Minmap.GetVisionDisplay ();
+		all.Append ("V1("); all.Append (visiondisp); all.Append (")");
 
 		if (Consts.secondcamera)
 			all.Append ("V2("); all.Append (Minmap2.GetVisionDisplay ()); all.Append (")");
@@ -257,7 +252,11 @@ public class AiInterface : MonoBehaviour {
 		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
 
-		return all.ToString ();
+
+		if (visiondisp.Length == 0) //when not drivingmode yet
+			return "";
+		else  
+			return all.ToString ();
 	}
 
 
@@ -457,28 +456,35 @@ public class AiInterface : MonoBehaviour {
 
 //================================================================================
 
+	public void LoadAndSendInfosToPython() {
+		if (!(Game.mode.Contains ("drive_AI"))) {return;}
+		long currtime = UnityTime();
+		if (currtime - lastpythonupdate >= Consts.updatepythonintervalms) {
+			string tmp = load_infos (false, false);
+			if (tmp.Length > 0) {
+				lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms;
+				just_hit_wall = false;
+				UnityEngine.Debug.Log ("SENDING TIME: " + MSTime ());
+				SendToPython (tmp);
+			}
+		}
+	}
+
 
 	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
 	// send, and if so, calls SenderClient's StartSenderClient
-	public void SendToPython(string data, Boolean force) {
+	public void SendToPython(string data) {
 		if (!(Game.mode.Contains ("drive_AI"))) {return;}
 
 		if (data == "resetServer") {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
-			data = "STime(" + MSTime() + ")" + data;
+			data = "STime(" + MSTime() + ")";//+ data;
 		}
-
-		long currtime = UnityTime();
-		if ((currtime - lastpythonupdate >= Consts.updatepythonintervalms) || (force)) {
-			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms;
-			if (data != "resetServer")
-				just_hit_wall = false;
-			UnityEngine.Debug.Log ("SENDING TIME: " + MSTime ());
-			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
-			t.Start();
-		}
+		print (data + " Starting Thread");
+		var t = new Thread(() => SenderClient.SendAufJedenFall(data));
+		t.Start();
 	}
 
 	public void ConnectAsReceiver() {
@@ -506,7 +512,7 @@ public class AiInterface : MonoBehaviour {
 		ReceiverClient.serverdown = false;
 		ReceiverClient.ResetServerConnectTrials();
 		ConnectAsReceiver ();
-		SendToPython ("resetServer", true);
+		SendToPython ("resetServer");
 	}
 
 	public void Disconnect() {
