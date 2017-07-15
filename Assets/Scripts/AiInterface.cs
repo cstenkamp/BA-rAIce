@@ -31,7 +31,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
-	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool secondcamera = false; //the sizes of the cameras are set in the Start() of GameScript
 	public const bool SeeCurbAsOff = false;
 }
 
@@ -102,6 +102,8 @@ public class AiInterface : MonoBehaviour {
 			UnityEngine.Debug.Log ("Started AI Mode");
 			SendToPython ("resetServer");
 			ConnectAsReceiver ();
+			lastCarPos = Car.Car.position;
+			lastCarRot = Car.Car.rotation;
 		}
 	}
 
@@ -182,21 +184,21 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
-	//difference in this function: it reloads if there is a reason to. Position and Rotation are basically the hash.
-	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		Vector3 pos = Car.Car.position;
-		Quaternion rot = Car.Car.rotation;
-		if (((pos != lastCarPos || rot != lastCarRot) || force_reload) && !forbid_reload) {
-			string tmp = GetAllInfos ();
-			if (tmp.Length != 0) {
-				lastCarPos = pos;
-				lastCarRot = rot;
-				lastpythonsent = tmp;
-				return lastpythonsent;
-			}
-		} 
-		return ""; //wenn die sich nicht verändert hat, sollste nix sagen.
-	}
+//	//difference in this function: it reloads if there is a reason to. Position and Rotation are basically the hash.
+//	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
+//		Vector3 pos = Car.Car.position;
+//		Quaternion rot = Car.Car.rotation;
+//		if (((pos != lastCarPos || rot != lastCarRot) || force_reload) && !forbid_reload) {
+//			string tmp = GetAllInfos ();
+//			if (tmp.Length != 0) {
+//				lastCarPos = pos;
+//				lastCarRot = rot;
+//				lastpythonsent = tmp;
+//				return lastpythonsent;
+//			}
+//		} 
+//		return ""; //wenn die sich nicht verändert hat, sollste nix sagen.
+//	}
 
 	public static void print(string str) {
 		UnityEngine.Debug.Log (str);
@@ -460,12 +462,17 @@ public class AiInterface : MonoBehaviour {
 		if (!(Game.mode.Contains ("drive_AI"))) {return;}
 		long currtime = UnityTime();
 		if (currtime - lastpythonupdate >= Consts.updatepythonintervalms) {
-			string tmp = load_infos (false, false);
-			if (tmp.Length > 0) {
-				lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms;
-				just_hit_wall = false;
-				UnityEngine.Debug.Log ("SENDING TIME: " + MSTime ());
-				SendToPython (tmp);
+			Vector3 pos = Car.Car.position;
+			Quaternion rot = Car.Car.rotation;
+			if (pos != lastCarPos || rot != lastCarRot) {
+				string tmp = GetAllInfos ();
+				if (tmp.Length > 0) {				
+					lastCarPos = pos;
+					lastCarRot = rot;
+					lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms;
+					just_hit_wall = false;
+					SendToPython (tmp);
+				}
 			}
 		}
 	}
@@ -480,9 +487,10 @@ public class AiInterface : MonoBehaviour {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
-			data = "STime(" + MSTime() + ")";//+ data;
+			long tmp = MSTime ();
+			UnityEngine.Debug.Log ("SENDING TIME: " + tmp);
+			data = "STime(" + tmp + ")" + data;
 		}
-		print (data + " Starting Thread");
 		var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 		t.Start();
 	}

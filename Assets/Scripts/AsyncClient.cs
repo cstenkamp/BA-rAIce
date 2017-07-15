@@ -63,7 +63,6 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 
 
-
 	//used for both sender and receiver
 	public void StartClientSocket() {  //this only starts the client and saves the socket.
 		if (serverdown)
@@ -147,8 +146,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 		} catch (Exception e) {
 			if (e is ObjectDisposedException || e is SocketException || e is NullReferenceException) {
 				//etabliere NEUE verbindung, die daten müssen schließlich rüber!
-				StartClientSocket (); //overwrites the old "socket"
-				AiInterface.print("This shouldnd happen too often deleteme");
+				StartClientSocket (); //overwrites the old "socket", stays in this object(!)
+				AiInterface.print("This shouldn't happen too often DELETEME");
 				Send (socket, data);  
 			} else {
 				UnityEngine.Debug.Log(e.ToString());
@@ -156,11 +155,11 @@ public class AsynchronousClient {  //updating python's value should happen async
 		}
 	}
 
-	public void Send(Socket client, String data) {  
+	public void Send(Socket socket, String data) {  
 		try {
 			data = preparestring(data);
 			byte[] byteData = Encoding.ASCII.GetBytes(data);  
-			client.BeginSend(byteData, 0, byteData.Length, 0,  new AsyncCallback(SendCallback), client);  
+			socket.BeginSend(byteData, 0, byteData.Length, 0,  new AsyncCallback(SendCallback), socket);  
 		} catch (Exception) {
 			throw;
 		}
@@ -172,7 +171,6 @@ public class AsynchronousClient {  //updating python's value should happen async
 			int bytesSent = client.EndSend(ar);  
 			//UnityEngine.Debug.Log("Sent {0} bytes to server.", bytesSent);  
 			sendDone.Set();  
-			AiInterface.print(AiInterface.MSTime() + "Some sending done");
 		} catch (Exception) {  
 			throw;
 		}  
@@ -194,9 +192,11 @@ public class AsynchronousClient {  //updating python's value should happen async
 				UnityEngine.Debug.Log ("Response updated to: "+response.pedals+" Time it took: "+(response.timestampReceive-response.timestampStarted).ToString()+"ms");  //ASDF
 			} catch (NullReferenceException) { //wird in Receive() gethrowt wenn python not connected
 				StartClientSocket ();
+				UnityEngine.Debug.Log ("Some Error DELETEME");
 				//öfter versuchen als receiver zu connecten, wenns nicht geht das melden
 			}
 		}
+		UnityEngine.Debug.Log ("Receiverloop ended DELETEME");
 	}
 
 
@@ -276,7 +276,6 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 		public void update(String newstr){
 			try {
-				UnityEngine.Debug.Log ("RECEIVING TIME: " + timestampStarted + " @ " + AiInterface.MSTime ());
 				if (newstr.Substring (0, 1) != "[") {
 					if (othercommand == false) 
 						timestampReceive = AiInterface.MSTime();
@@ -289,6 +288,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
 					timestampStarted = (long) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
 					timestampReceive = (long) AiInterface.MSTime();
+					UnityEngine.Debug.Log ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + (timestampReceive-timestampStarted).ToString() + "ms)" );
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {

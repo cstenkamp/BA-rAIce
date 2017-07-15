@@ -65,7 +65,7 @@ public class Recorder : MonoBehaviour {
 
 		if (sv_save_round) { 
 			SVLearnLap = new List<TrackingPoint> ();
-			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
+			string data = ""; //string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
 			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, data, (int) Mathf.Round(Car.velocity))); 
 		}
 	}
@@ -80,7 +80,7 @@ public class Recorder : MonoBehaviour {
 	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
 	public void SVLearnUpdateList(){
 		if (sv_save_round) {
-			string data = "STime(" + AiInterface.MSTime ().ToString () + ")" + AiInt.load_infos (false, false);
+			string data = ""; //string data = "STime(" + AiInterface.MSTime ().ToString () + ")" + AiInt.load_infos (false, false);
 			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, data, (int) Mathf.Round(Car.velocity)));
 		}
 	}
@@ -97,7 +97,7 @@ public class Recorder : MonoBehaviour {
 		}
 
 		if (sv_save_round) {
-			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false	, false);
+			string data = ""; //string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false	, false);
 			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, data, (int) Mathf.Round(Car.velocity)));
 			string whodrove;
 			if (Car.Game.mode.Contains ("keyboarddriving")) {
