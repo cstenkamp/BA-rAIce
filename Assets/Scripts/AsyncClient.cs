@@ -32,7 +32,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 	public Socket socket;    
 
 
-	public AsynchronousClient(bool for_sender){
+	public AsynchronousClient(bool for_sender, CarController pCar, AiInterface pAiInt){
 		//these are non-static
 		serverconnecttrials = 0;
 		serverdown = true;
@@ -41,7 +41,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		receiveDone = new ManualResetEvent(false);  
 		is_sender = for_sender;
 		if (!is_sender) {
-			response = new Response();
+			response = new Response(pCar, pAiInt);
 		}
 	}
 
@@ -266,14 +266,20 @@ public class AsynchronousClient {  //updating python's value should happen async
 		public bool othercommand;
 		public String command;
 		public int pythonreactiontime;
+		public AiInterface.FixedSizedQueue lastRTs;
+		public CarController Car;
+		public AiInterface AiInt;
 
-		public Response(){
+		public Response(CarController pCar, AiInterface pAiInt){
 			pedals = String.Empty;  
 			timestampReceive = 0;
 			timestampStarted = 0;
 			othercommand = false;
 			command = String.Empty;
 			pythonreactiontime = 0;
+			lastRTs = new AiInterface.FixedSizedQueue(); lastRTs.Limit = 20;
+			Car = pCar;
+			AiInt = pAiInt;
 		}
 
 		public void update(String newstr){
@@ -288,10 +294,20 @@ public class AsynchronousClient {  //updating python's value should happen async
 					command = newstr;
 				} else {
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
-					timestampStarted = (long) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
-					timestampReceive = (long) AiInterface.MSTime();
+					timestampStarted = long.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
+					timestampReceive = AiInterface.MSTime();
 					UnityEngine.Debug.Log ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + (timestampReceive-timestampStarted).ToString() + "ms)" );
 					pythonreactiontime = (int)(timestampReceive-timestampStarted);
+					lastRTs.Enqueue(pythonreactiontime);
+					if (lastRTs.getAverage() > 2*Consts.EXPECTED_PYTHONRT) { //If there is too much of a delay from python, rather freeze the game
+						lastRTs.Dequeue();
+						UnityEngine.Debug.Log("Freezing because of Connection Delay");
+						Car.shouldQuickpauseReason = "ConnectionDelay";
+					}
+					if (timestampStarted == AiInt.lastpythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
+						UnityEngine.Debug.Log("Unfreezing because Connection Delay resolved");
+						Car.shouldUnQuickpauseReason = "ConnectionDelay";
+					}
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {
@@ -308,3 +324,5 @@ public class AsynchronousClient {  //updating python's value should happen async
 		}
 	}
 } 
+
+

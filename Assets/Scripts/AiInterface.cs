@@ -7,6 +7,7 @@ using System.Collections;
 using System;
 using System.Threading;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -14,11 +15,12 @@ using System.Text;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 200;  //multiples of 25
+	public const int updatepythonintervalms = 125;  //multiples of 25
 	public const int MAXAGEPYTHONRESULT = 150;     //this uses realtime, in constrast to all other time-dependent stuff
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const int CREATE_VECS_ALL = 25;
 	public const bool fixedresultusagetime = true;
+	public const int EXPECTED_PYTHONRT = 150;
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -62,6 +64,7 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythonupdate;
 	public long lastpythonresult;
 	public long lastgetvectortime;
+	//public long lastresultusagetime;
 	public string lastpythonsent;
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
@@ -76,15 +79,16 @@ public class AiInterface : MonoBehaviour {
 	public bool AIDriving = false;
 	public bool HumanTakingControl = false;
 	public bool just_hit_wall = false;
+	public bool AIMode = false;
 
-	public AsynchronousClient SenderClient   = new AsynchronousClient(true);
-	public AsynchronousClient ReceiverClient = new AsynchronousClient(false);
+	public AsynchronousClient SenderClient;
+	public AsynchronousClient ReceiverClient; 
 
 	//=============================================================================
 
 	public static long MSTime() {
 		//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
-		return ((long)(DateTime.UtcNow.Ticks/10000)) % 10000000000; //there are 10000ticks in a ms
+		return ((long)((long)DateTime.UtcNow.Ticks/10000L)) % 10000000000L; //there are 10000ticks in a ms
 	}
 
 	public static long UnityTime() {
@@ -103,21 +107,61 @@ public class AiInterface : MonoBehaviour {
 
 
 	public void StartedAIMode() {
-		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {  
+		if (Game.mode.Contains ("drive_AI")) {  
 			UnityEngine.Debug.Log ("Started AI Mode");
+			SenderClient   = new AsynchronousClient(true, Car, this);
+			ReceiverClient = new AsynchronousClient(false, Car, this);
 			SendToPython ("resetServer", true);
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
+			AIMode = true;
 		}
 	}
 
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
-		if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
-			if ((Game.mode.Contains ("drive_AI")) && !HumanTakingControl)
-				Car.UnQuickPause ();
+		if (AIMode) {
+			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
+				Car.UnQuickPause ("Python");
+		}
+
+
+		//RECEIVING the result from python
+		if (AIMode && !HumanTakingControl) {
+			string message;
+			if (MSTime() - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
+			{
+				message = ReceiverClient.response.pedals;
+			} else { 
+				//TODO: was SOLL er tun wenn das python-result zu alt ist??
+				message = ReceiverClient.response.pedals; //[0, 0, 0]; //nicht leer, da der dann nicht die anderen sahcne überschreit!
+				AIDriving = false;
+			}
+			if (ReceiverClient.response.othercommand) {
+				if (ReceiverClient.response.command == "pleasereset") { 
+					Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
+					ReceiverClient.response.othercommand = false;
+					AIDriving = false;
+				}
+				if (ReceiverClient.response.command == "pleaseFreeze") { 
+					Car.QuickPause ("Python");
+				}
+				if (ReceiverClient.response.command == "pleaseUnFreeze") { 
+					Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
+				} 
+			} else if ((message.Length > 0) && (message [0] == '[')) {
+				message = message.Substring (1, message.Length - 2);
+				float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
+				nn_throttle = controls [0];
+				nn_brake = controls [1];
+				nn_steer = controls [2];
+				AIDriving = true;
+			} else {
+				AIDriving = false;
+			}
+		}
 	}
 
 
@@ -132,7 +176,7 @@ public class AiInterface : MonoBehaviour {
 		
 
 	public void resetCarAI() {
-		if (Game.mode.Contains ("drive_AI")) {
+		if (AIMode) {
 			ReceiverClient.response.reset ();
 			nn_brake = 0;
 			nn_steer = 0;
@@ -142,7 +186,7 @@ public class AiInterface : MonoBehaviour {
 
 
 	public void punish_wallhit() {
-		if (Game.mode.Contains ("drive_AI")) {
+		if (AIMode) {
 			SendToPython ("wallhit", true); //ist das doppelt gemoppelt?
 			just_hit_wall = true;
 		}
@@ -158,37 +202,6 @@ public class AiInterface : MonoBehaviour {
 			SendToPython (tmp, false);
 		}
 
-		//RECEIVING the result from python
-		if ((Game.mode.Contains("drive_AI")) && !HumanTakingControl) {
-			string message;
-			if (MSTime() - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
-			{
-				message = ReceiverClient.response.pedals;
-			} else { 
-				//TODO: was SOLL er tun wenn das python-result zu alt ist??
-				message = ReceiverClient.response.pedals; //[0, 0, 0]; //nicht leer, da der dann nicht die anderen sahcne überschreit!
-				AIDriving = false;
-			}
-			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleasereset") { 
-				Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
-				ReceiverClient.response.othercommand = false;
-				AIDriving = false;
-			} else if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseFreeze") { 
-				Car.QuickPause ();
-			} else if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") { 
-				Car.UnQuickPause (); //is useless here, because FixedUpdate is not run during Freeze
-			} else if ((message.Length > 0) && (message [0] == '[')) {
-				message = message.Substring (1, message.Length - 2);
-				float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
-				nn_throttle = controls [0];
-				nn_brake = controls [1];
-				nn_steer = controls [2];
-				AIDriving = true;
-			} else {
-				AIDriving = false;
-			}
-
-		}
 	}
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
@@ -466,7 +479,7 @@ public class AiInterface : MonoBehaviour {
 //================================================================================
 
 //	public void LoadAndSendInfosToPython() {
-//		if (!(Game.mode.Contains ("drive_AI"))) {return;}
+//		if (!AIMode) {return;}
 //		long currtime = MSTime();
 //		if (currtime - lastpythonupdate >= Consts.updatepythonintervalms) {
 //			Vector3 pos = Car.Car.position;
@@ -485,7 +498,7 @@ public class AiInterface : MonoBehaviour {
 //	}
 
 	public void SendToPython(string data, Boolean force) {
-		if (!(Game.mode.Contains ("drive_AI"))) {return;}
+		if (!AIMode) {return;}
 
 		long currtime = MSTime ();
 		if (data == "resetServer") {
@@ -525,6 +538,7 @@ public class AiInterface : MonoBehaviour {
 		}	
 	}
 
+
 	public void Reconnect() {
 		Disconnect ();
 		UnityEngine.Debug.Log ("Connecting...");
@@ -535,6 +549,7 @@ public class AiInterface : MonoBehaviour {
 		ConnectAsReceiver ();
 		SendToPython ("resetServer", true);
 	}
+
 
 	public void Disconnect() {
 		if (!SenderClient.serverdown) {
@@ -549,8 +564,38 @@ public class AiInterface : MonoBehaviour {
 
 
 
-//============================== HELPER FUNCTIONS ==================================================
 
+
+
+
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////// helper-classes & functions //////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+
+	public class FixedSizedQueue
+	{
+		Queue<int> q = new Queue<int>();
+		public int Limit { get; set; }
+		public void Enqueue(int obj)
+		{
+			q.Enqueue(obj);
+			while (q.Count > Limit)
+				q.Dequeue ();
+		}
+		public int getAverage() {
+			List<int> list = q.ToList ();
+			var average = list.Average();
+			UnityEngine.Debug.Log(average.ToString());
+			return (int) average;
+		}
+		public void Dequeue() {
+			q.Dequeue ();
+		}
+
+	}
 
 	private static int ParseIntBase3(string s)
 	{
@@ -561,7 +606,4 @@ public class AiInterface : MonoBehaviour {
 		}
 		return res;
 	}
-
-
-
 }

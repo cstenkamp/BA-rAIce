@@ -2,7 +2,7 @@
 using System.Collections;
 using System;
 using System.Linq;
-
+using System.Collections.Generic;
 
 public class CarController : MonoBehaviour {
 
@@ -49,6 +49,10 @@ public class CarController : MonoBehaviour {
 	float deltaPosition;
 	float deltaTime;
 	public float velocity;
+	public List<string> FreezeReasons;
+	public string shouldQuickpauseReason = "";
+	public string shouldUnQuickpauseReason = ""; //they would be bools, but as I also need to specify the reason, they're strings ("" or content)
+	
 
 	// Use this for initialization
 	void Start ()
@@ -127,7 +131,7 @@ public class CarController : MonoBehaviour {
 						brakePedalValue = 0.0f;
 					}
 				}
-			} else if (((Game.mode.Contains ("drive_AI")) && !(Game.mode.Contains ("keyboarddriving")) && !(AiInt.HumanTakingControl) && (AiInt.AIDriving == true))) {
+			} else if (AiInt.AIMode && !(Game.mode.Contains ("keyboarddriving")) && !(AiInt.HumanTakingControl) && (AiInt.AIDriving == true)) {
 				steeringValue = AiInt.nn_steer;
 				throttlePedalValue = AiInt.nn_throttle;
 				brakePedalValue = AiInt.nn_brake;
@@ -154,12 +158,20 @@ public class CarController : MonoBehaviour {
 
 	void Update()
 	{
+		if (shouldQuickpauseReason != "") { //since some QuickPause-functions are not threadsafe, I can only set a variable from them such that the main-thread does that instead.
+			QuickPause (shouldQuickpauseReason);
+			shouldQuickpauseReason = "";
+		}
+		if (shouldUnQuickpauseReason != "") {
+			UnQuickPause (shouldUnQuickpauseReason);
+			shouldUnQuickpauseReason = "";
+		}
 
 		if (Input.GetKeyDown(KeyCode.Q)) {   
 			if (Game.mode.Contains ("driving")) {
-				QuickPause ();
+				QuickPause ("Manual");
 			} else {
-				UnQuickPause (); 
+				UnQuickPause ("Manual"); 
 			}
 		}
 
@@ -226,21 +238,21 @@ public class CarController : MonoBehaviour {
 
 		// reconnect to server
 		if (Input.GetKeyDown(KeyCode.C)) {   
-			if (Game.mode.Contains("drive_AI")) {
+			if (AiInt.AIMode) {
 				AiInt.Reconnect(); 
 			}
 		}
 
 		// disconnect from server
 		if (Input.GetKeyDown (KeyCode.D)) { 
-			if (Game.mode.Contains ("drive_AI")) {
+			if (AiInt.AIMode) {
 				AiInt.Disconnect(); 
 			}
 		}
 
 		//human taking control over AI
 		if (Input.GetKeyDown (KeyCode.H)) { 
-			if ((Game.mode.Contains ("drive_AI")) && (!Game.mode.Contains ("keyboarddriving"))) {
+			if (AiInt.AIMode && (!Game.mode.Contains ("keyboarddriving"))) {
 				AiInt.FlipHumanTakingControl();
 				Game.UserInterface.UpdateGameModeDisp ();
 			}
@@ -427,25 +439,11 @@ public class CarController : MonoBehaviour {
 	}
 
 
-	//the Quick-pause function, triggered by Q or the python-client
-
-	public void QuickPause() {
-		if (Game.mode.Contains ("driving")) {
-			Game.mode = Game.mode.Where (val => val != "driving").ToArray ();
-			Game.UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
-			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
-
-			Game.CarCamera.SetActive (false); 
-			ShowThisGUI = true;
-		}
-	}
-
-
 	void OnGUI () {
-		GUI.Label(new Rect(0, 0, 100, 400), "FPS: "+((int)(1.0f / Time.smoothDeltaTime)).ToString());  
-		if (Game.mode.Contains("drive_AI")) {
-			GUI.Label(new Rect(0, 15, 100, 400), "Python RT:" + AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
-			GUI.Label(new Rect(0, 30, 100, 400), "i.b. sendings:" + AiInt.lastunityinbetweentime.ToString());  
+		GUI.Label(new Rect(0, 0, 100, 600), "FPS: "+((int)(1.0f / Time.smoothDeltaTime)).ToString());  
+		if (AiInt.AIMode) {
+			GUI.Label(new Rect(0, 15, 100, 600), "Python RT:" + AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
+			GUI.Label(new Rect(0, 30, 100, 600), "i.b. sendings:" + AiInt.lastunityinbetweentime.ToString());  
 		}
 
 		if (ShowThisGUI) {
@@ -457,12 +455,32 @@ public class CarController : MonoBehaviour {
 	}
 
 
-	public void UnQuickPause() {
+	//the Quick-pause function, triggered by Q or the python-client
+	public void QuickPause(string reason) {
+		if (Game.mode.Contains ("driving")) {
+			FreezeReasons.Add (reason);
+			Game.mode = Game.mode.Where (val => val != "driving").ToArray ();
+			Game.UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
+			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
+			Game.CarCamera.SetActive (false); 
+			ShowThisGUI = true;
+		}
+	}
+
+
+
+	public void UnQuickPause(string reason) {
 		if ( (!Game.mode.Contains ("driving")) && (!Game.mode.Contains ("menu"))) {
-			Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
-			Game.UserInterface.UpdateGameModeDisp ();
-			Game.CarCamera.SetActive (true);
-			Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
+			if (reason == "All")
+				FreezeReasons.Clear();
+			else
+				FreezeReasons.Remove (reason);
+			if (!FreezeReasons.Any()) {
+				Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
+				Game.UserInterface.UpdateGameModeDisp ();
+				Game.CarCamera.SetActive (true);
+				Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
+			}
 		}
 	}
 

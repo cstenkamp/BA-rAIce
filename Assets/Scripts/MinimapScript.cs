@@ -18,7 +18,7 @@ public class MinimapScript : MonoBehaviour {
 	public GameScript Game;
 
 	public string GetVisionDisplay() {
-		if (!(Game.mode.Contains ("drive_AI")) && !(Game.mode.Contains ("train_AI"))) {
+		if (!Game.AiInt.AIMode && !Game.mode.Contains ("train_AI")) {
 			return "";
 		}
 
