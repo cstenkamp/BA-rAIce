@@ -80,7 +80,7 @@ public class AiInterface : MonoBehaviour {
 
 	public static long MSTime() {
 		//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
-		return ((long)(DateTime.UtcNow.Ticks/10000)) % 1000000; //there are 10000ticks in a ms
+		return ((long)(DateTime.UtcNow.Ticks/10000)) % 10000000000; //there are 10000ticks in a ms
 	}
 
 	public static long UnityTime() {
@@ -90,10 +90,10 @@ public class AiInterface : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		//Time.fixedDeltaTime = (10.0f)/ 1000; //TODO war mal CREATE_VECS_ALL
-		lastpythonupdate =  UnityTime();
-		lastpythonresult =  UnityTime();
-		lastgetvectortime = UnityTime();	
+		//Time.fixedDeltaTime = (CREATE_VECS_ALL+0.0f)/ 1000	; 
+		lastpythonupdate =  MSTime();
+		lastpythonresult =  MSTime();
+		lastgetvectortime = MSTime();	
 		StartedAIMode ();
 	}
 
@@ -111,10 +111,6 @@ public class AiInterface : MonoBehaviour {
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
-		if ((Game.mode.Contains ("drive_AI")) || (Game.mode.Contains ("train_AI"))) {
-            load_infos (false, false); //da das load_infos (mostly wegen dem konvertieren des visionvektors in ein int-array) recht lange dauert, hab ich mich entschieden das LADEN des visionvektor in update zu machen, und das SENDEN in fixedupdate, damit das spiel sich nicht aufhangt.
-        }
-
 		if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
 			if ((Game.mode.Contains ("drive_AI")) && !HumanTakingControl)
 				Car.UnQuickPause ();
@@ -151,10 +147,11 @@ public class AiInterface : MonoBehaviour {
 
 	//fixedupdate is run every physics-timestep, which is independent of framerate.
 	void FixedUpdate() {
-		//SENDING the already prepared data to python (all updatepythonintervalms/200 ms)
+		//SENDING data to python (all updatepythonintervalms/200 ms)
 		if (Game.mode.Contains("drive_AI")) {
-			SendToPython (load_infos (false, false), false);
-			//LoadAndSendInfosToPython();  
+			string tmp = load_infos (false, false);
+			if (tmp.Length > 0)
+			SendToPython (tmp, false);
 		}
 
 		//RECEIVING the result from python
@@ -191,30 +188,20 @@ public class AiInterface : MonoBehaviour {
 	}
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		long currtime = Environment.TickCount;
-
+		long currtime = MSTime ();
+		Vector3 pos = Car.Car.position;
+		Quaternion rot = Car.Car.rotation;
 		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
-			lastpythonsent = GetAllInfos ();
-			lastgetvectortime = currtime;
+			if (pos != lastCarPos || rot != lastCarRot) {
+				lastCarPos = pos;
+				lastCarRot = rot;
+				lastpythonsent = GetAllInfos ();
+				lastgetvectortime = currtime; //TODO //BUG - sollte lastgetvectortime + Consts.CREATE_VECS_ALL; sein
+			}
 		} 
 		return lastpythonsent;
 	}
 
-//	//difference in this function: it reloads if there is a reason to. Position and Rotation are basically the hash.
-//	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-//		Vector3 pos = Car.Car.position;
-//		Quaternion rot = Car.Car.rotation;
-//		if (((pos != lastCarPos || rot != lastCarRot) || force_reload) && !forbid_reload) {
-//			string tmp = GetAllInfos ();
-//			if (tmp.Length != 0) {
-//				lastCarPos = pos;
-//				lastCarRot = rot;
-//				lastpythonsent = tmp;
-//				return lastpythonsent;
-//			}
-//		} 
-//		return ""; //wenn die sich nicht verändert hat, sollste nix sagen.
-//	}
 
 	public static void print(string str) {
 		UnityEngine.Debug.Log (str);
@@ -476,7 +463,7 @@ public class AiInterface : MonoBehaviour {
 
 //	public void LoadAndSendInfosToPython() {
 //		if (!(Game.mode.Contains ("drive_AI"))) {return;}
-//		long currtime = UnityTime();
+//		long currtime = MSTime();
 //		if (currtime - lastpythonupdate >= Consts.updatepythonintervalms) {
 //			Vector3 pos = Car.Car.position;
 //			Quaternion rot = Car.Car.rotation;
@@ -496,42 +483,25 @@ public class AiInterface : MonoBehaviour {
 	public void SendToPython(string data, Boolean force) {
 		if (!(Game.mode.Contains ("drive_AI"))) {return;}
 
-		long tmp = MSTime ();
+		long currtime = MSTime ();
 		if (data == "resetServer") {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
 		} else {
-			data = "STime(" + tmp + ")" + data;
+			data = "STime(" + currtime + ")" + data;
 		}
 
-		long currtime = Environment.TickCount;
-		if ((currtime - lastpythonupdate > Consts.updatepythonintervalms) || (force)) {
+		if (((currtime - lastpythonupdate > Consts.updatepythonintervalms)) || (force)) {
 			if (data != "resetServer")
 				just_hit_wall = false;
 
-			UnityEngine.Debug.Log ("SENDING TIME: " + tmp);
+			UnityEngine.Debug.Log ("SENDING TIME: " + currtime + "(" + (currtime-lastpythonupdate) + "ms after last)");
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
-			lastpythonupdate = currtime;
+			lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms; //currtime;
 		}
 	}
 
-//	// this method is called whenever something is supposed to be sent to python. This method figures out if it is even supposed to
-//	// send, and if so, calls SenderClient's StartSenderClient
-//	public void SendToPython(string data) {
-//		if (!(Game.mode.Contains ("drive_AI"))) {return;}
-//
-//		if (data == "resetServer") {
-//			SenderClient.StartClientSocket ();
-//			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
-//		} else {
-//			long tmp = MSTime ();
-//			UnityEngine.Debug.Log ("SENDING TIME: " + tmp);
-//			data = "STime(" + tmp + ")" + data;
-//		}
-//		var t = new Thread(() => SenderClient.SendAufJedenFall(data));
-//		t.Start();
-//	}
 
 	public void ConnectAsReceiver() {
 		ReceiverClient.serverdown = false;
