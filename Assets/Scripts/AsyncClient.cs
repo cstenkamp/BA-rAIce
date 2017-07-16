@@ -265,6 +265,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		public long timestampReceive;
 		public bool othercommand;
 		public String command;
+		public int pythonreactiontime;
 
 		public Response(){
 			pedals = String.Empty;  
@@ -272,6 +273,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			timestampStarted = 0;
 			othercommand = false;
 			command = String.Empty;
+			pythonreactiontime = 0;
 		}
 
 		public void update(String newstr){
@@ -289,6 +291,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 					timestampStarted = (long) float.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
 					timestampReceive = (long) AiInterface.MSTime();
 					UnityEngine.Debug.Log ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + (timestampReceive-timestampStarted).ToString() + "ms)" );
+					pythonreactiontime = (int)(timestampReceive-timestampStarted);
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {

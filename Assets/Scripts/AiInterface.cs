@@ -66,6 +66,10 @@ public class AiInterface : MonoBehaviour {
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
 
+	//these are only for plotting and seeing if everything is ok
+	public int lastunityinbetweentime;
+
+
 	public float nn_steer = 0;
 	public float nn_brake = 0;
 	public float nn_throttle = 0;
@@ -496,6 +500,7 @@ public class AiInterface : MonoBehaviour {
 				just_hit_wall = false;
 
 			UnityEngine.Debug.Log ("SENDING TIME: " + currtime + "(" + (currtime-lastpythonupdate) + "ms after last)");
+			lastunityinbetweentime = (int)(currtime - lastpythonupdate);
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
 			lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms; //currtime;

@@ -442,7 +442,12 @@ public class CarController : MonoBehaviour {
 
 
 	void OnGUI () {
-		GUI.Label(new Rect(0, 0, 100, 100), ((int)(1.0f / Time.smoothDeltaTime)).ToString());        
+		GUI.Label(new Rect(0, 0, 100, 400), "FPS: "+((int)(1.0f / Time.smoothDeltaTime)).ToString());  
+		if (Game.mode.Contains("drive_AI")) {
+			GUI.Label(new Rect(0, 15, 100, 400), "Python RT:" + AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
+			GUI.Label(new Rect(0, 30, 100, 400), "i.b. sendings:" + AiInt.lastunityinbetweentime.ToString());  
+		}
+
 		if (ShowThisGUI) {
 			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
 			myRT.Create ();
