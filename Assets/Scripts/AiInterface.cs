@@ -15,12 +15,12 @@ using System.Text;
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
-	public const int updatepythonintervalms = 125;  //multiples of 25
+	public const int updatepythonintervalms = 100;  //multiples of 25
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const int CREATE_VECS_ALL = 25;
-	public const int EXPECTED_PYTHONRT = 150;
+	public const int MAX_PYTHON_RT = 200;
 	public const bool fixedresultusagetime = true;
-	public const bool interpolateresults = true;
+	public const bool interpolateresults = false;
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -35,7 +35,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
-	public const bool secondcamera = false; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
 	public const bool SeeCurbAsOff = false;
 }
 
@@ -68,8 +68,8 @@ public class AiInterface : MonoBehaviour {
 	public long lastresultusagetime;
 	public long lastsaviortime;
 	public string lastpythonsent;
-	public string lastpythonresult;
-	public string penultimatepythonresult; //fürs interpolieren
+	public AsynchronousClient.Response lastpythonresult;
+	public AsynchronousClient.Response penultimatepythonresult; //fürs interpolieren
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
 
@@ -90,19 +90,9 @@ public class AiInterface : MonoBehaviour {
 
 	//=============================================================================
 
-	public static long MSTime() {
-		//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
-		return ((long)((long)DateTime.UtcNow.Ticks/10000L)) % 10000000000L; //there are 10000ticks in a ms
-	}
-
-	public static long UnityTime() {
-		return (long)(Time.time * 1000);
-	}
 
 
-	// Use this for initialization
 	void Start () {
-		//Time.fixedDeltaTime = (CREATE_VECS_ALL+0.0f)/ 1000	; 
 		StartedAIMode ();
 	}
 
@@ -116,12 +106,12 @@ public class AiInterface : MonoBehaviour {
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
-			lastpythonupdate =  MSTime();
+			lastpythonupdate =  UnityTime();
 			lastgetvectortime = MSTime();	
 			lastresultusagetime = UnityTime();	
 			lastpythonsent = "";
-			lastpythonresult = "";
-			penultimatepythonresult = "";
+			lastpythonresult = new AsynchronousClient.Response (null, null);
+			penultimatepythonresult = new AsynchronousClient.Response (null, null);
 			AIMode = true;
 		}
 	}
@@ -134,21 +124,38 @@ public class AiInterface : MonoBehaviour {
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
 				Car.UnQuickPause ("Python");
 
-			if (currtime - lastsaviortime > 10000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
+			if (currtime - lastsaviortime > 2000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
 				Car.UnQuickPause ("ConnectionDelay");
 				lastsaviortime = currtime;
+			}
+
+			//RECEIVING the special commands from python
+			if (AIMode && !HumanTakingControl) {
+				//handle special commands...
+				if (ReceiverClient.response.othercommand) {
+					if (ReceiverClient.response.command == "pleasereset") { 
+						Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
+						ReceiverClient.response.othercommand = false;
+					}
+					if (ReceiverClient.response.command == "pleaseFreeze") { 
+						Car.QuickPause ("Python");
+					}
+					if (ReceiverClient.response.command == "pleaseUnFreeze") { 
+						Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
+					} 
+				}
 			}
 		}
 	}
 
 
-	//fixedupdate is run every physics-timestep, which is independent of framerate.
+	// FixedUpdate is run every physics-timestep, which is independent of framerate and times precisely in Unity-time
 	void FixedUpdate() {
 		long currtime = MSTime ();
 		long currUnTime = UnityTime ();
 
-		//SENDING data to python (all updatepythonintervalms/200 ms)
-		if (Game.mode.Contains("drive_AI")) {
+		//SENDING data to python (all updatepythonintervalms ms)
+		if (AIMode) {
 			string tmp = load_infos (false, false);
 			if (tmp.Length > 0)
 				SendToPython (tmp, false);
@@ -156,27 +163,13 @@ public class AiInterface : MonoBehaviour {
 
 		//RECEIVING the result from python
 		if (AIMode && !HumanTakingControl) {
-			//handle special commands...
-			if (ReceiverClient.response.othercommand) {
-				if (ReceiverClient.response.command == "pleasereset") { 
-					Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
-					ReceiverClient.response.othercommand = false;
-				}
-				if (ReceiverClient.response.command == "pleaseFreeze") { 
-					Car.QuickPause ("Python");
-				}
-				if (ReceiverClient.response.command == "pleaseUnFreeze") { 
-					Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
-				} 
-			}
-
-			//and the commands on how to drive!
+			
+			//only the commands on how to drive, as special commands need to also run when frozen (!)
 			string message = ReceiverClient.response.getContent();
 			if (message.Length > 5) {
-				message = message.Substring (1, message.Length - 2);
 				if (Consts.fixedresultusagetime) {
 					penultimatepythonresult = lastpythonresult;
-					lastpythonresult = message;
+					lastpythonresult = ReceiverClient.response.Clone();
 				} else {
 					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
 					nn_throttle = controls [0];
@@ -185,31 +178,54 @@ public class AiInterface : MonoBehaviour {
 				}
 			}
 
-			//if you just added them, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
+			//if you just added them in the upper part, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
 			if (Consts.fixedresultusagetime) {
-				bool dontinterpolate = false;
 				if (Consts.interpolateresults) {
-					if (lastpythonresult.Length > 1 && penultimatepythonresult.Length > 1) {
-						float[] oldcontrols = Array.ConvertAll (penultimatepythonresult.Split (','), float.Parse);
-						float[] newcontrols = Array.ConvertAll (lastpythonresult.Split (','), float.Parse);
-						float percentage = ((float)currtime - (float)lastresultusagetime) / (float)Consts.updatepythonintervalms;
-						nn_throttle = (float)((1.0 - percentage) * oldcontrols [0] + percentage * newcontrols [0]);
-						nn_brake = (float)((1.0 - percentage) * oldcontrols [1] + percentage * newcontrols [1]); 
-						nn_steer = (float)((1.0 - percentage) * oldcontrols [2] + percentage * newcontrols [2]); 
-					} else
-						dontinterpolate = true;
-				}
-				if (currUnTime - lastresultusagetime >= Consts.updatepythonintervalms-15) {
-					if (!Consts.interpolateresults || dontinterpolate) {					
-						if (lastpythonresult.Length > 1) {
-							float[] controls = Array.ConvertAll (lastpythonresult.Split (','), float.Parse);
-							nn_throttle = controls [0];
-							nn_brake = controls [1];
-							nn_steer = controls [2];
-						}
+					if (currUnTime - lastpythonresult.CTimestampStarted >= Consts.MAX_PYTHON_RT) {
+
 					}
-					lastresultusagetime = lastresultusagetime + (long)Consts.updatepythonintervalms;
+
+				} else {
+					if (lastpythonresult.getContent ().Length > 1 && penultimatepythonresult.getContent ().Length > 1) {
+						float[] controls;
+						if (currUnTime - lastpythonresult.CTimestampStarted >= Consts.MAX_PYTHON_RT) {
+							controls = Array.ConvertAll (lastpythonresult.getContent ().Split (','), float.Parse);
+							//print ("Using last value"+(currUnTime - lastpythonresult.CTimestampStarted) );
+						} else {
+							controls = Array.ConvertAll (penultimatepythonresult.getContent ().Split (','), float.Parse);
+							//print ("Using penultimate value"+(currUnTime - lastpythonresult.CTimestampStarted) );
+						}
+						nn_throttle = controls [0];
+						nn_brake = controls [1];
+						nn_steer = controls [2];
+					} else {
+						//sollte er hier freezen?
+					}
 				}
+//				bool dontinterpolate = false;
+//				if (Consts.interpolateresults) {
+//					if (lastpythonresult.getContent().Length > 1 && penultimatepythonresult.getContent().Length > 1) {
+//						float[] oldcontrols = Array.ConvertAll (penultimatepythonresult.getContent().Split (','), float.Parse);
+//						float[] newcontrols = Array.ConvertAll (lastpythonresult.getContent().Split (','), float.Parse);
+//						float percentage = ((float)currtime - (float)lastresultusagetime) / (float)Consts.updatepythonintervalms;
+//						nn_throttle = (float)((1.0 - percentage) * oldcontrols [0] + percentage * newcontrols [0]);
+//						nn_brake = (float)((1.0 - percentage) * oldcontrols [1] + percentage * newcontrols [1]); 
+//						nn_steer = (float)((1.0 - percentage) * oldcontrols [2] + percentage * newcontrols [2]); 
+//					} else
+//						dontinterpolate = true;
+//				}
+//				if (currUnTime - lastresultusagetime >= Consts.updatepythonintervalms-2) {
+//					if (!Consts.interpolateresults || dontinterpolate) {					
+//						if (lastpythonresult.getContent().Length > 1) {
+//							print ((currUnTime - lastpythonresult.CTimestampStarted));
+//							float[] controls = Array.ConvertAll (lastpythonresult.getContent().Split (','), float.Parse);
+//							nn_throttle = controls [0];
+//							nn_brake = controls [1];
+//							nn_steer = controls [2];
+//						}
+//					}
+//					lastresultusagetime = lastresultusagetime + (long)Consts.updatepythonintervalms;
+//				}
 			}
 			nn_brake = nn_brake <= 1 ? nn_brake : 1; nn_brake = nn_brake >= 0 ? nn_brake : 0;
 			nn_throttle = nn_throttle <= 1 ? nn_throttle : 1; nn_throttle = nn_throttle >= 0 ? nn_throttle : 0;
@@ -244,6 +260,9 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////// Sending to python //////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
@@ -256,28 +275,84 @@ public class AiInterface : MonoBehaviour {
 					lastCarPos = pos;
 					lastCarRot = rot;
 					lastpythonsent = GetAllInfos ();
-					lastgetvectortime = currtime; //TODO //BUG - sollte lastgetvectortime + Consts.CREATE_VECS_ALL; sein
+					lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
 				}
 			} 
 		} else {
 			if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 				lastpythonsent = GetAllInfos ();
-				lastgetvectortime = currtime; //TODO //BUG - sollte lastgetvectortime + Consts.CREATE_VECS_ALL; sein
+				lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
 			}
 		}
 		return lastpythonsent;
 	}
 
 
-	public static void print(string str) {
-		UnityEngine.Debug.Log (str);
+
+	public void SendToPython(string data, Boolean force) {
+		if (!AIMode) {return;}
+
+		long currtime = MSTime ();
+		long currUnTime = UnityTime ();
+		if (data == "resetServer") {
+			SenderClient.StartClientSocket ();
+			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
+		} else {
+			data = "STime(" + currtime + ")" + data;
+		}
+
+		if (((currUnTime - lastpythonupdate > Consts.updatepythonintervalms)) || (force)) { //FOR SENDING THE UNITYTIME IS RELEVANT; FOR MEASURING HOW LONG PYTHON TOOK THE REAL_TIME IS RELEVANT
+			if (data != "resetServer")
+				just_hit_wall = false;
+
+			//print("SENDING REALTIME: " + currtime + "(" + (currUnTime-lastpythonupdate) + "ums after last)");
+			lastunityinbetweentime = (int)(currUnTime - lastpythonupdate);
+			var t =	 new Thread(() => SenderClient.SendAufJedenFall(data));
+			t.Start();
+			penultimatepythonupdate = lastpythonupdate;
+			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms; //würde nicht so klappen wenn ich realtime nehmen würde
+		}
 	}
 
 
-	//================================================================================
-	// ################################################################
-	// ################ MAIN GETTER AND SETTER FUNCTIONS ##############
-	// ################################################################
+	public void ConnectAsReceiver() {
+		ReceiverClient.serverdown = false;
+		ReceiverClient.StartClientSocket ();
+
+		var t = new Thread(() => ReceiverClient.StartReceiveLoop());
+		t.Start();
+	}
+
+
+
+	public void Reconnect() {
+		if (!AIMode) {return;}
+		Disconnect ();
+		UnityEngine.Debug.Log ("Connecting...");
+		SenderClient.serverdown = false;
+		SenderClient.ResetServerConnectTrials();
+		ReceiverClient.serverdown = false;
+		ReceiverClient.ResetServerConnectTrials();
+		ConnectAsReceiver ();
+		SendToPython ("resetServer", true);
+	}
+
+
+	public void Disconnect() {
+		if (!AIMode) {return;}
+		if (!SenderClient.serverdown) {
+			UnityEngine.Debug.Log ("Disconnecting...");
+			SenderClient.StopClient ();
+			SenderClient.serverdown = true;
+			ReceiverClient.StopClient ();
+			ReceiverClient.serverdown = true;
+		}
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////// Main Getter-functions ////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 
 	public string GetAllInfos() {
@@ -472,14 +547,9 @@ public class AiInterface : MonoBehaviour {
 
 
 
-
-
-
-
-	//================================================================================
-	// #############################################
-	// ############## HELPER FUNCTIONS #############
-	// #############################################
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////// Helper-functions ///////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 	float InterpolatePointAngle(float[] absoluteAnchorAngles, float[] absoluteAnchorDistances, float d)
 	{
@@ -525,99 +595,6 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-//================================================================================
-
-//	public void LoadAndSendInfosToPython() {
-//		if (!AIMode) {return;}
-//		long currtime = MSTime();
-//		if (currtime - lastpythonupdate >= Consts.updatepythonintervalms) {
-//			Vector3 pos = Car.Car.position;
-//			Quaternion rot = Car.Car.rotation;
-//			if (pos != lastCarPos || rot != lastCarRot) {
-//				string tmp = GetAllInfos ();
-//				if (tmp.Length > 0) {				
-//					lastCarPos = pos;
-//					lastCarRot = rot;
-//					lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms;
-//					just_hit_wall = false;
-//					SendToPython (tmp);
-//				}
-//			}
-//		}
-//	}
-
-	public void SendToPython(string data, Boolean force) {
-		if (!AIMode) {return;}
-
-		long currtime = MSTime ();
-		if (data == "resetServer") {
-			SenderClient.StartClientSocket ();
-			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
-		} else {
-			data = "STime(" + currtime + ")" + data;
-		}
-
-		if (((currtime - lastpythonupdate > Consts.updatepythonintervalms)) || (force)) {
-			if (data != "resetServer")
-				just_hit_wall = false;
-
-			UnityEngine.Debug.Log ("SENDING TIME: " + currtime + "(" + (currtime-lastpythonupdate) + "ms after last)");
-			lastunityinbetweentime = (int)(currtime - lastpythonupdate);
-			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
-			t.Start();
-			penultimatepythonupdate = lastpythonupdate;
-			lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms; //currtime;
-		}
-	}
-
-
-	public void ConnectAsReceiver() {
-		ReceiverClient.serverdown = false;
-		ReceiverClient.StartClientSocket ();
-
-		var t = new Thread(() => ReceiverClient.StartReceiveLoop());
-		t.Start();
-	}
-
-
-	public static void KillOtherThreads() {
-		ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
-		foreach (Thread thread in currentThreads)    
-		{
-			thread.Abort();
-		}	
-	}
-
-
-	public void Reconnect() {
-		Disconnect ();
-		UnityEngine.Debug.Log ("Connecting...");
-		SenderClient.serverdown = false;
-		SenderClient.ResetServerConnectTrials();
-		ReceiverClient.serverdown = false;
-		ReceiverClient.ResetServerConnectTrials();
-		ConnectAsReceiver ();
-		SendToPython ("resetServer", true);
-	}
-
-
-	public void Disconnect() {
-		if (!SenderClient.serverdown) {
-			UnityEngine.Debug.Log ("Disconnecting...");
-			SenderClient.StopClient ();
-			SenderClient.serverdown = true;
-			ReceiverClient.StopClient ();
-			ReceiverClient.serverdown = true;
-		}
-	}
-
-
-
-
-
-
-
-
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// helper-classes & functions //////////////////////////////////////////////////
@@ -649,7 +626,7 @@ public class AiInterface : MonoBehaviour {
 		public int getAverage() {
 			List<int> list = q.Select(x => int.Parse(x.ToString())).ToList ();
 			var average = list.Average();
-			UnityEngine.Debug.Log(average.ToString());
+			//print(average.ToString());
 			return (int) average;
 		}
 
@@ -657,6 +634,11 @@ public class AiInterface : MonoBehaviour {
 			if (length > 0)
 				length -= 1;
 			return q.Dequeue ();
+		}
+
+		public void Clear() {
+			while (q.Count > 0)
+				q.Dequeue ();
 		}
 
 	}
@@ -670,4 +652,27 @@ public class AiInterface : MonoBehaviour {
 		}
 		return res;
 	}
+
+
+	public static void print(string str) {
+		UnityEngine.Debug.Log (str);
+	}
+
+	public static long MSTime() {
+		//https://stackoverflow.com/questions/243351/environment-tickcount-vs-datetime-now 
+		return ((long)((long)DateTime.UtcNow.Ticks/10000L)) % 10000000000L; //there are 10000ticks in a ms
+	}
+
+	public static long UnityTime() {
+		return (long)(Time.time * 1000);
+	}
+
+	public static void KillOtherThreads() {
+		ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
+		foreach (Thread thread in currentThreads)    
+		{
+			thread.Abort();
+		}	
+	}
+
 }

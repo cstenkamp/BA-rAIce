@@ -38,7 +38,7 @@ public class MiniMap2Script : MonoBehaviour {
 
 				float displaywidth = 0.1f;
 				cam.targetTexture = null;
-				cam.rect = new Rect (0.77f, 0.6f, displaywidth, displaywidth / (0.5f * cam.aspect));
+				cam.rect = new Rect(0.77f, 0.6f, displaywidth, displaywidth/(0.66f*cam.aspect));
 
 				// return imgToArray(myImg); dann müsste man danach noch TwoDImageToStr aufrufen, aber das ist sinnlos
 				return MinimapScript.imgToStr (myImg);
