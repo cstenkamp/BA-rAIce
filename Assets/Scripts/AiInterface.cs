@@ -30,6 +30,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
 	public const bool debug_makevalidafterwallhit = false;
+	public const bool debug_updateonlyifnew = false;
 
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
@@ -247,16 +248,23 @@ public class AiInterface : MonoBehaviour {
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
 		long currtime = MSTime ();
-		Vector3 pos = Car.Car.position;
-		Quaternion rot = Car.Car.rotation;
-		if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
-			if (pos != lastCarPos || rot != lastCarRot) {
-				lastCarPos = pos;
-				lastCarRot = rot;
+		if (Consts.debug_updateonlyifnew) {
+			Vector3 pos = Car.Car.position;
+			Quaternion rot = Car.Car.rotation;
+			if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
+				if (pos != lastCarPos || rot != lastCarRot) {
+					lastCarPos = pos;
+					lastCarRot = rot;
+					lastpythonsent = GetAllInfos ();
+					lastgetvectortime = currtime; //TODO //BUG - sollte lastgetvectortime + Consts.CREATE_VECS_ALL; sein
+				}
+			} 
+		} else {
+			if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
 				lastpythonsent = GetAllInfos ();
 				lastgetvectortime = currtime; //TODO //BUG - sollte lastgetvectortime + Consts.CREATE_VECS_ALL; sein
 			}
-		} 
+		}
 		return lastpythonsent;
 	}
 
