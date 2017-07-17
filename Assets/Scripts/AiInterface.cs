@@ -20,7 +20,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int CREATE_VECS_ALL = 25;
 	public const int EXPECTED_PYTHONRT = 150;
 	public const bool fixedresultusagetime = true;
-	public const bool interpolateresults = false;
+	public const bool interpolateresults = true;
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -64,12 +64,14 @@ public class AiInterface : MonoBehaviour {
 	public long lastpythonupdate;
 	public long penultimatepythonupdate; //für das auflösen des freezes im reciever, weil python manchmal das letzte nicht zurücksendet... -.-
 	public long lastgetvectortime;
+	public long lastresultusagetime;
+	public long lastsaviortime;
 	public string lastpythonsent;
+	public string lastpythonresult;
+	public string penultimatepythonresult; //fürs interpolieren
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
-	public long lastresultusagetime;
 
-	public FixedSizedQueue<string> lastPythonCommands;
 
 	//these are only for plotting and seeing if everything is ok
 	public int lastunityinbetweentime;
@@ -100,8 +102,6 @@ public class AiInterface : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		//Time.fixedDeltaTime = (CREATE_VECS_ALL+0.0f)/ 1000	; 
-		lastpythonupdate =  MSTime();
-		lastgetvectortime = MSTime();	
 		StartedAIMode ();
 	}
 
@@ -115,7 +115,12 @@ public class AiInterface : MonoBehaviour {
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
-			lastPythonCommands = new FixedSizedQueue<string> (10);
+			lastpythonupdate =  MSTime();
+			lastgetvectortime = MSTime();	
+			lastresultusagetime = UnityTime();	
+			lastpythonsent = "";
+			lastpythonresult = "";
+			penultimatepythonresult = "";
 			AIMode = true;
 		}
 	}
@@ -123,11 +128,30 @@ public class AiInterface : MonoBehaviour {
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
+		long currtime = MSTime ();
 		if (AIMode) {
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
 				Car.UnQuickPause ("Python");
-		}
 
+			if (currtime - lastsaviortime > 10000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
+				Car.UnQuickPause ("ConnectionDelay");
+				lastsaviortime = currtime;
+			}
+		}
+	}
+
+
+	//fixedupdate is run every physics-timestep, which is independent of framerate.
+	void FixedUpdate() {
+		long currtime = MSTime ();
+		long currUnTime = UnityTime ();
+
+		//SENDING data to python (all updatepythonintervalms/200 ms)
+		if (Game.mode.Contains("drive_AI")) {
+			string tmp = load_infos (false, false);
+			if (tmp.Length > 0)
+				SendToPython (tmp, false);
+		}
 
 		//RECEIVING the result from python
 		if (AIMode && !HumanTakingControl) {
@@ -147,10 +171,11 @@ public class AiInterface : MonoBehaviour {
 
 			//and the commands on how to drive!
 			string message = ReceiverClient.response.getContent();
-			if (message.Length > 0) {
+			if (message.Length > 5) {
 				message = message.Substring (1, message.Length - 2);
 				if (Consts.fixedresultusagetime) {
-					lastPythonCommands.Enqueue (message);
+					penultimatepythonresult = lastpythonresult;
+					lastpythonresult = message;
 				} else {
 					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
 					nn_throttle = controls [0];
@@ -159,21 +184,34 @@ public class AiInterface : MonoBehaviour {
 				}
 			}
 
-			//if you just added them, here is where you take the fitting one (because fixed time & interpolating in between)
-			if (Consts.fixedresultusagetime && lastPythonCommands.length > 0) {
-				long currtime = MSTime ();
+			//if you just added them, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
+			if (Consts.fixedresultusagetime) {
+				bool dontinterpolate = false;
 				if (Consts.interpolateresults) {
-
-				} else {
-					if (currtime - lastresultusagetime > Consts.updatepythonintervalms) {
-						float[] controls = Array.ConvertAll (lastPythonCommands.Dequeue().Split (','), float.Parse);
-						nn_throttle = controls [0];
-						nn_brake = controls [1];
-						nn_steer = controls [2];
-						lastresultusagetime = currtime;
+					if (lastpythonresult.Length > 1 && penultimatepythonresult.Length > 1) {
+						float[] oldcontrols = Array.ConvertAll (penultimatepythonresult.Split (','), float.Parse);
+						float[] newcontrols = Array.ConvertAll (lastpythonresult.Split (','), float.Parse);
+						float percentage = ((float)currtime - (float)lastresultusagetime) / (float)Consts.updatepythonintervalms;
+						nn_throttle = (float)((1.0 - percentage) * oldcontrols [0] + percentage * newcontrols [0]);
+						nn_brake = (float)((1.0 - percentage) * oldcontrols [1] + percentage * newcontrols [1]); 
+						nn_steer = (float)((1.0 - percentage) * oldcontrols [2] + percentage * newcontrols [2]); 
+					} else
+						dontinterpolate = true;
+				}
+				if (currUnTime - lastresultusagetime >= Consts.updatepythonintervalms-15) {
+					if (!Consts.interpolateresults || dontinterpolate) {					
+						if (lastpythonresult.Length > 1) {
+							float[] controls = Array.ConvertAll (lastpythonresult.Split (','), float.Parse);
+							nn_throttle = controls [0];
+							nn_brake = controls [1];
+							nn_steer = controls [2];
+						}
 					}
+					lastresultusagetime = lastresultusagetime + (long)Consts.updatepythonintervalms;
 				}
 			}
+			nn_brake = nn_brake <= 1 ? nn_brake : 1; nn_brake = nn_brake >= 0 ? nn_brake : 0;
+			nn_throttle = nn_throttle <= 1 ? nn_throttle : 1; nn_throttle = nn_throttle >= 0 ? nn_throttle : 0;
 		}
 	}
 
@@ -206,16 +244,6 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	//fixedupdate is run every physics-timestep, which is independent of framerate.
-	void FixedUpdate() {
-		//SENDING data to python (all updatepythonintervalms/200 ms)
-		if (Game.mode.Contains("drive_AI")) {
-			string tmp = load_infos (false, false);
-			if (tmp.Length > 0)
-			SendToPython (tmp, false);
-		}
-
-	}
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
 		long currtime = MSTime ();
@@ -619,7 +647,7 @@ public class AiInterface : MonoBehaviour {
 
 		public T Dequeue() {
 			if (length > 0)
-				length += 1;
+				length -= 1;
 			return q.Dequeue ();
 		}
 

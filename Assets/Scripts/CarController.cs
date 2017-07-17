@@ -440,7 +440,9 @@ public class CarController : MonoBehaviour {
 
 
 	void OnGUI () {
-		GUI.Label(new Rect(0, 0, 100, 600), "FPS: "+((int)(1.0f / Time.smoothDeltaTime)).ToString());  
+		if (Time.timeScale > 0) {
+			GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
+		} 
 		if (AiInt.AIMode) {
 			GUI.Label(new Rect(0, 15, 100, 600), "Python RT:" + AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
 			GUI.Label(new Rect(0, 30, 100, 600), "i.b. sendings:" + AiInt.lastunityinbetweentime.ToString());  
