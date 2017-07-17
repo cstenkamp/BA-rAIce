@@ -264,9 +264,10 @@ public class AsynchronousClient {  //updating python's value should happen async
 		public long timestampStarted;
 		public long timestampReceive;
 		public bool othercommand;
+		private bool read;
 		public String command;
 		public int pythonreactiontime;
-		public AiInterface.FixedSizedQueue lastRTs;
+		public AiInterface.FixedSizedQueue<int> lastRTs;
 		public CarController Car;
 		public AiInterface AiInt;
 
@@ -277,7 +278,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 			othercommand = false;
 			command = String.Empty;
 			pythonreactiontime = 0;
-			lastRTs = new AiInterface.FixedSizedQueue(); lastRTs.Limit = 20;
+			read = true; 
+			lastRTs = new AiInterface.FixedSizedQueue<int>(20);
 			Car = pCar;
 			AiInt = pAiInt;
 		}
@@ -293,21 +295,22 @@ public class AsynchronousClient {  //updating python's value should happen async
 					}
 					command = newstr;
 				} else {
+					read = false;
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
 					timestampStarted = long.Parse(newstr.Substring (newstr.IndexOf ("Time(")+5, newstr.LastIndexOf (")")-newstr.IndexOf ("Time(")-5 ));
 					timestampReceive = AiInterface.MSTime();
 					UnityEngine.Debug.Log ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + (timestampReceive-timestampStarted).ToString() + "ms)" );
 					pythonreactiontime = (int)(timestampReceive-timestampStarted);
 					lastRTs.Enqueue(pythonreactiontime);
-					if (lastRTs.getAverage() > 2*Consts.EXPECTED_PYTHONRT) { //If there is too much of a delay from python, rather freeze the game
+					if (timestampStarted == AiInt.lastpythonupdate || timestampStarted == AiInt.penultimatepythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
+						UnityEngine.Debug.Log("Unfreezing because Connection Delay resolved");
+						Car.shouldUnQuickpauseReason = "ConnectionDelay";
+					} else if (lastRTs.getAverage() > 2*Consts.EXPECTED_PYTHONRT) { //If there is too much of a delay from python, rather freeze the game
 						lastRTs.Dequeue();
 						UnityEngine.Debug.Log("Freezing because of Connection Delay");
 						Car.shouldQuickpauseReason = "ConnectionDelay";
 					}
-					if (timestampStarted == AiInt.lastpythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
-						UnityEngine.Debug.Log("Unfreezing because Connection Delay resolved");
-						Car.shouldUnQuickpauseReason = "ConnectionDelay";
-					}
+
 					othercommand = false;
 				}
 			} catch (ArgumentOutOfRangeException e) {
@@ -321,6 +324,11 @@ public class AsynchronousClient {  //updating python's value should happen async
 			timestampStarted = 0;
 			othercommand = false;
 			command = String.Empty;			
+		}
+
+		public string getContent() {
+			read = true;
+			return pedals;
 		}
 	}
 } 

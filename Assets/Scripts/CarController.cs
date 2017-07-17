@@ -131,7 +131,7 @@ public class CarController : MonoBehaviour {
 						brakePedalValue = 0.0f;
 					}
 				}
-			} else if (AiInt.AIMode && !(Game.mode.Contains ("keyboarddriving")) && !(AiInt.HumanTakingControl) && (AiInt.AIDriving == true)) {
+			} else if (AiInt.AIMode && !(Game.mode.Contains ("keyboarddriving")) && !(AiInt.HumanTakingControl)) {
 				steeringValue = AiInt.nn_steer;
 				throttlePedalValue = AiInt.nn_throttle;
 				brakePedalValue = AiInt.nn_brake;

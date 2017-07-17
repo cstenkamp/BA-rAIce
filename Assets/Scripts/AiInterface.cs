@@ -16,11 +16,11 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 125;  //multiples of 25
-	public const int MAXAGEPYTHONRESULT = 150;     //this uses realtime, in constrast to all other time-dependent stuff
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const int CREATE_VECS_ALL = 25;
-	public const bool fixedresultusagetime = true;
 	public const int EXPECTED_PYTHONRT = 150;
+	public const bool fixedresultusagetime = true;
+	public const bool interpolateresults = false;
 
 	public const int visiondisplay_x = 30; //30
 	public const int visiondisplay_y = 45; //45
@@ -62,12 +62,14 @@ public class AiInterface : MonoBehaviour {
 
 	//for sending to python
 	public long lastpythonupdate;
-	public long lastpythonresult;
+	public long penultimatepythonupdate; //für das auflösen des freezes im reciever, weil python manchmal das letzte nicht zurücksendet... -.-
 	public long lastgetvectortime;
-	//public long lastresultusagetime;
 	public string lastpythonsent;
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
+	public long lastresultusagetime;
+
+	public FixedSizedQueue<string> lastPythonCommands;
 
 	//these are only for plotting and seeing if everything is ok
 	public int lastunityinbetweentime;
@@ -76,7 +78,6 @@ public class AiInterface : MonoBehaviour {
 	public float nn_steer = 0;
 	public float nn_brake = 0;
 	public float nn_throttle = 0;
-	public bool AIDriving = false;
 	public bool HumanTakingControl = false;
 	public bool just_hit_wall = false;
 	public bool AIMode = false;
@@ -100,7 +101,6 @@ public class AiInterface : MonoBehaviour {
 	void Start () {
 		//Time.fixedDeltaTime = (CREATE_VECS_ALL+0.0f)/ 1000	; 
 		lastpythonupdate =  MSTime();
-		lastpythonresult =  MSTime();
 		lastgetvectortime = MSTime();	
 		StartedAIMode ();
 	}
@@ -115,6 +115,7 @@ public class AiInterface : MonoBehaviour {
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
+			lastPythonCommands = new FixedSizedQueue<string> (10);
 			AIMode = true;
 		}
 	}
@@ -130,20 +131,11 @@ public class AiInterface : MonoBehaviour {
 
 		//RECEIVING the result from python
 		if (AIMode && !HumanTakingControl) {
-			string message;
-			if (MSTime() - ReceiverClient.response.timestampStarted < Consts.MAXAGEPYTHONRESULT) 
-			{
-				message = ReceiverClient.response.pedals;
-			} else { 
-				//TODO: was SOLL er tun wenn das python-result zu alt ist??
-				message = ReceiverClient.response.pedals; //[0, 0, 0]; //nicht leer, da der dann nicht die anderen sahcne überschreit!
-				AIDriving = false;
-			}
+			//handle special commands...
 			if (ReceiverClient.response.othercommand) {
 				if (ReceiverClient.response.command == "pleasereset") { 
 					Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 					ReceiverClient.response.othercommand = false;
-					AIDriving = false;
 				}
 				if (ReceiverClient.response.command == "pleaseFreeze") { 
 					Car.QuickPause ("Python");
@@ -151,15 +143,36 @@ public class AiInterface : MonoBehaviour {
 				if (ReceiverClient.response.command == "pleaseUnFreeze") { 
 					Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
 				} 
-			} else if ((message.Length > 0) && (message [0] == '[')) {
+			}
+
+			//and the commands on how to drive!
+			string message = ReceiverClient.response.getContent();
+			if (message.Length > 0) {
 				message = message.Substring (1, message.Length - 2);
-				float[] controls = Array.ConvertAll(message.Split (','), float.Parse);
-				nn_throttle = controls [0];
-				nn_brake = controls [1];
-				nn_steer = controls [2];
-				AIDriving = true;
-			} else {
-				AIDriving = false;
+				if (Consts.fixedresultusagetime) {
+					lastPythonCommands.Enqueue (message);
+				} else {
+					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
+					nn_throttle = controls [0];
+					nn_brake = controls [1];
+					nn_steer = controls [2];
+				}
+			}
+
+			//if you just added them, here is where you take the fitting one (because fixed time & interpolating in between)
+			if (Consts.fixedresultusagetime && lastPythonCommands.length > 0) {
+				long currtime = MSTime ();
+				if (Consts.interpolateresults) {
+
+				} else {
+					if (currtime - lastresultusagetime > Consts.updatepythonintervalms) {
+						float[] controls = Array.ConvertAll (lastPythonCommands.Dequeue().Split (','), float.Parse);
+						nn_throttle = controls [0];
+						nn_brake = controls [1];
+						nn_steer = controls [2];
+						lastresultusagetime = currtime;
+					}
+				}
 			}
 		}
 	}
@@ -516,6 +529,7 @@ public class AiInterface : MonoBehaviour {
 			lastunityinbetweentime = (int)(currtime - lastpythonupdate);
 			var t = new Thread(() => SenderClient.SendAufJedenFall(data));
 			t.Start();
+			penultimatepythonupdate = lastpythonupdate;
 			lastpythonupdate = currtime; //lastpythonupdate + Consts.updatepythonintervalms; //currtime;
 		}
 	}
@@ -558,7 +572,6 @@ public class AiInterface : MonoBehaviour {
 			SenderClient.serverdown = true;
 			ReceiverClient.StopClient ();
 			ReceiverClient.serverdown = true;
-			AIDriving = false;
 		}
 	}
 
@@ -575,24 +588,39 @@ public class AiInterface : MonoBehaviour {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	public class FixedSizedQueue
+	public class FixedSizedQueue<T>
 	{
-		Queue<int> q = new Queue<int>();
+		Queue<T> q;
 		public int Limit { get; set; }
-		public void Enqueue(int obj)
+		public int length;
+
+		public FixedSizedQueue(int limit) {
+			q = new Queue<T>();
+			Limit = limit;
+			length = 0;
+		}
+
+		public void Enqueue(T obj)
 		{
 			q.Enqueue(obj);
+			if (length < Limit)
+				length += 1;
+			
 			while (q.Count > Limit)
 				q.Dequeue ();
 		}
+
 		public int getAverage() {
-			List<int> list = q.ToList ();
+			List<int> list = q.Select(x => int.Parse(x.ToString())).ToList ();
 			var average = list.Average();
 			UnityEngine.Debug.Log(average.ToString());
 			return (int) average;
 		}
-		public void Dequeue() {
-			q.Dequeue ();
+
+		public T Dequeue() {
+			if (length > 0)
+				length += 1;
+			return q.Dequeue ();
 		}
 
 	}
