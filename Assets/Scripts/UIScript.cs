@@ -128,6 +128,24 @@ public class UIScript : MonoBehaviour {
 	}
 
 
+
+	void OnGUI () {
+		if (Time.timeScale > 0) {
+			GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
+		} 
+		if (Game.AiInt.AIMode) {
+			GUI.Label(new Rect(0, 15, 100, 600), "Python RT:" + Game.AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
+			GUI.Label(new Rect(0, 30, 100, 600), "i.b. sendings:" + Game.AiInt.lastunityinbetweentime.ToString());  
+		}
+
+
+		if (Game.Car.ShowThisGUI) {
+			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
+			myRT.Create ();
+			GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
+		}
+	}
+
 	
 	// Update is called once per frame
 	void Update ()

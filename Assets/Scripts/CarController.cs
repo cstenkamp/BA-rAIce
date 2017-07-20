@@ -45,14 +45,16 @@ public class CarController : MonoBehaviour {
 	public Vector3 startPosition = new Vector3(48.0f,1.1f,150.0f);
 	public Quaternion startRotation = new Quaternion(0.0f,180.0f,0.0f,0.0f);
 	Vector3 lastPosition;
+	Vector3 lastPerpendicularPosition;
 	float lastTime;
 	float deltaPosition;
+	float deltaPositionPerpendicular;
 	float deltaTime;
 	public float velocity;
+	public float velocity_perpendicular;
 	public List<string> FreezeReasons;
 	public string shouldQuickpauseReason = "";
 	public string shouldUnQuickpauseReason = ""; //they would be bools, but as I also need to specify the reason, they're strings ("" or content)
-	
 
 	// Use this for initialization
 	void Start ()
@@ -111,8 +113,11 @@ public class CarController : MonoBehaviour {
 			// calculate velocity
 			deltaTime = Time.time - lastTime;
 			deltaPosition = Vector3.Distance (lastPosition, transform.position);
+			deltaPositionPerpendicular = Vector3.Distance (lastPerpendicularPosition, Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position)); 
 			velocity = deltaPosition / deltaTime * 3.6f;
+			velocity_perpendicular = deltaPositionPerpendicular / deltaTime * 3.6f;
 			lastPosition = transform.position;
+			lastPerpendicularPosition = Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position);
 			lastTime = Time.time;
 	
 			// car control
@@ -153,6 +158,17 @@ public class CarController : MonoBehaviour {
 			colliderFR.steerAngle = maxSteer * steeringValue;
 		}
 
+	}
+
+	int mod(int x, int m) {
+		return (x%m + m)%m;
+	}
+
+	public float GetSpeedInStreetDir() 
+	{
+		Vector3 Vecbehind = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position), Timing.Rec.Tracking.anchorVector.Length-1)];
+		Vector3 Vecbefore = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+1, Timing.Rec.Tracking.anchorVector.Length-1)];
+		return Mathf.Round ((Vector3.Dot (Car.velocity, (Vecbefore - Vecbehind).normalized))*3.6f * 100) / 100;		
 	}
 
 
@@ -436,24 +452,6 @@ public class CarController : MonoBehaviour {
 	public void LapCleanTrue()
 	{
 		lapClean = true;
-	}
-
-
-	void OnGUI () {
-		if (Time.timeScale > 0) {
-			GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
-		} 
-		if (AiInt.AIMode) {
-			GUI.Label(new Rect(0, 15, 100, 600), "Python RT:" + AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
-			GUI.Label(new Rect(0, 30, 100, 600), "i.b. sendings:" + AiInt.lastunityinbetweentime.ToString());  
-		}
-
-		if (ShowThisGUI) {
-			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
-			myRT.Create ();
-			GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
-			ShowThisGUI = true;
-		}
 	}
 
 

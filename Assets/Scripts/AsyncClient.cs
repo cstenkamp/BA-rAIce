@@ -264,6 +264,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		public long CTimestampStarted;
 		public bool othercommand;
 		private bool read;
+		public bool used;
 		public String command;
 		public int pythonreactiontime;
 		public AiInterface.FixedSizedQueue<int> lastRTs;
@@ -279,6 +280,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			command = String.Empty;
 			pythonreactiontime = 0;
 			read = true; 
+			used = true;
 			lastRTs = new AiInterface.FixedSizedQueue<int>(20);
 			Car = pCar;
 			AiInt = pAiInt;
@@ -291,6 +293,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			CTimestampStarted = pctimestampstarted;
 			othercommand = false;
 			read = false;
+			used = false;
 		}
 
 
@@ -306,6 +309,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 					command = newstr;
 				} else {
 					read = false;
+					used = false;
 					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
 					String tmp = newstr.Substring (newstr.IndexOf ("CTime(")+6); CTimestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")"))); //this is Unity-time, such that a result comes definitely to the specified time.
 					tmp = newstr.Substring (newstr.IndexOf ("STime(")+6); timestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")")));  //this is realtime, to calculate how fast the PC is.
@@ -336,7 +340,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 			timestampStarted = 0;
 			CTimestampStarted = 0;
 			othercommand = false;
-			command = String.Empty;			
+			command = String.Empty;		
+			used = false;
 		}
 
 		public string getContent() {
@@ -348,6 +353,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 		}
 
 		public Response Clone() {
+			used = true;
 			return new Response (pedals, timestampStarted, timestampReceive, CTimestampStarted);
 		}
 	}

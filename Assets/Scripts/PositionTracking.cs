@@ -64,14 +64,9 @@ public class PositionTracking : MonoBehaviour {
 		TriggerRec(progress, 0.5f);
 
 
-		Quaternion Angle;
-		try {
-			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[getClosestAnchorBehind(Car.transform.position)], Vector3.up); 
-		} catch (IndexOutOfRangeException) {
-			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[0], Vector3.up); 
-		}
 
-		if ((lastFrameProgress <= progress) || (Quaternion.Angle(Angle, Car.transform.rotation) < 100)) {
+
+		if ((lastFrameProgress <= progress) || (getCarAngle() < 100)) {
 			lastRightDirectionTime = AiInterface.UnityTime();
 		}
 
@@ -86,6 +81,18 @@ public class PositionTracking : MonoBehaviour {
 			ShowPerpendicular(); // for debugging
 
 	}
+
+	public float getCarAngle()
+	{
+		Quaternion Angle;
+		try {
+			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[getClosestAnchorBehind(Car.transform.position)], Vector3.up); 
+		} catch (IndexOutOfRangeException) {
+			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[0], Vector3.up); 
+		}
+		return Mathf.Round (Quaternion.Angle (Angle, Car.transform.rotation) * 100) / 100;
+	}
+
 
 	// #####################################################################
 	// ########################## FUNCTIONS START ##########################
@@ -174,7 +181,7 @@ public class PositionTracking : MonoBehaviour {
 	}
 
 	//anhand der koordinaten von den vektoren konnen wir sagen wie viel gedreht der nachste punkt in relation zur gerade der 2 vorherigen ist...
-	float[] GetSegmentAngles(Vector3[] anchorVector, bool normalized=false)
+	public float[] GetSegmentAngles(Vector3[] anchorVector, bool normalized=false)
 	{
 		float[] segmentAngles = new float[anchorVector.Length];
 		for (int i=0; i < anchorVector.Length-1; i++)
@@ -443,7 +450,7 @@ public class PositionTracking : MonoBehaviour {
 		return centerDist;
 	}
 
-	Vector3 GetPerpendicular(Vector3 carPosition)
+	public Vector3 GetPerpendicular(Vector3 carPosition)
 	{
 		// get closest anchor
 		int closestAnchor = GetClosestAnchor(carPosition);

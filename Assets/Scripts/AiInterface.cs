@@ -18,7 +18,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int updatepythonintervalms = 100;  //multiples of 25
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const int CREATE_VECS_ALL = 25;
-	public const int MAX_PYTHON_RT = 200;
+	public const int MAX_PYTHON_RT = 300;
 	public const bool fixedresultusagetime = true;
 	public const bool interpolateresults = false;
 
@@ -68,8 +68,8 @@ public class AiInterface : MonoBehaviour {
 	public long lastresultusagetime;
 	public long lastsaviortime;
 	public string lastpythonsent;
-	public AsynchronousClient.Response lastpythonresult;
-	public AsynchronousClient.Response penultimatepythonresult; //fürs interpolieren
+	public AsynchronousClient.Response lastUsedPythonResult;
+	public FixedSizedQueue<AsynchronousClient.Response> lastpythonresults;
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
 
@@ -110,8 +110,8 @@ public class AiInterface : MonoBehaviour {
 			lastgetvectortime = MSTime();	
 			lastresultusagetime = UnityTime();	
 			lastpythonsent = "";
-			lastpythonresult = new AsynchronousClient.Response (null, null);
-			penultimatepythonresult = new AsynchronousClient.Response (null, null);
+			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
+			lastpythonresults = new FixedSizedQueue<AsynchronousClient.Response> (20);
 			AIMode = true;
 		}
 	}
@@ -168,8 +168,8 @@ public class AiInterface : MonoBehaviour {
 			string message = ReceiverClient.response.getContent();
 			if (message.Length > 5) {
 				if (Consts.fixedresultusagetime) {
-					penultimatepythonresult = lastpythonresult;
-					lastpythonresult = ReceiverClient.response.Clone();
+					if (!ReceiverClient.response.used)
+						lastpythonresults.Enqueue (ReceiverClient.response.Clone());
 				} else {
 					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
 					nn_throttle = controls [0];
@@ -181,26 +181,24 @@ public class AiInterface : MonoBehaviour {
 			//if you just added them in the upper part, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
 			if (Consts.fixedresultusagetime) {
 				if (Consts.interpolateresults) {
-					if (currUnTime - lastpythonresult.CTimestampStarted >= Consts.MAX_PYTHON_RT) {
-
+					if (currUnTime - lastpythonresults.Peek().CTimestampStarted >= Consts.MAX_PYTHON_RT) {
+						//if you dont need lastUsedPythonResult then get rid of it
 					}
 
 				} else {
-					if (lastpythonresult.getContent ().Length > 1 && penultimatepythonresult.getContent ().Length > 1) {
-						float[] controls;
-						if (currUnTime - lastpythonresult.CTimestampStarted >= Consts.MAX_PYTHON_RT) {
-							controls = Array.ConvertAll (lastpythonresult.getContent ().Split (','), float.Parse);
-							//print ("Using last value"+(currUnTime - lastpythonresult.CTimestampStarted) );
-						} else {
-							controls = Array.ConvertAll (penultimatepythonresult.getContent ().Split (','), float.Parse);
-							//print ("Using penultimate value"+(currUnTime - lastpythonresult.CTimestampStarted) );
+					if (lastpythonresults.Peek() != null && lastpythonresults.Peek().getContent ().Length > 1) { //if there are new items in the buffer
+						if (lastpythonresults.Peek ().CTimestampStarted <= currUnTime - Consts.MAX_PYTHON_RT) { //if enough time passed that there is a new candidate..
+							while (lastpythonresults.Peek() != null && lastpythonresults.Peek ().CTimestampStarted <= currUnTime - 2 * Consts.MAX_PYTHON_RT)  //get rid of the ones that are too old 
+								lastpythonresults.Dequeue ();
+							if (lastpythonresults.Peek () != null && lastpythonresults.Peek ().getContent ().Length > 1) {//look if there's a new one that fits
+								print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
+								float[] controls = Array.ConvertAll (lastpythonresults.Dequeue ().getContent ().Split (','), float.Parse); //use it, and remove it from the queue!
+								nn_throttle = controls [0];
+								nn_brake = controls [1];
+								nn_steer = controls [2];
+							}
 						}
-						nn_throttle = controls [0];
-						nn_brake = controls [1];
-						nn_steer = controls [2];
-					} else {
-						//sollte er hier freezen?
-					}
+					} //else do nothing, you rather need to wait
 				}
 //				bool dontinterpolate = false;
 //				if (Consts.interpolateresults) {
@@ -301,7 +299,7 @@ public class AiInterface : MonoBehaviour {
 			data = "STime(" + currtime + ")" + data;
 		}
 
-		if (((currUnTime - lastpythonupdate > Consts.updatepythonintervalms)) || (force)) { //FOR SENDING THE UNITYTIME IS RELEVANT; FOR MEASURING HOW LONG PYTHON TOOK THE REAL_TIME IS RELEVANT
+		if (((currUnTime - lastpythonupdate >= Consts.updatepythonintervalms)) || (force)) { //FOR SENDING THE UNITYTIME IS RELEVANT; FOR MEASURING HOW LONG PYTHON TOOK THE REAL_TIME IS RELEVANT
 			if (data != "resetServer")
 				just_hit_wall = false;
 
@@ -409,29 +407,38 @@ public class AiInterface : MonoBehaviour {
 
 	public float[] GetSpeedSteer() {
 		float velo = Car.velocity;
+		float velo2 = Car.velocity_perpendicular;
+		float velo3 = Car.GetSpeedInStreetDir ();
+		int MAXSPEED = 250;
+		int fake_speed = -1;
 		if (HumanTakingControl) { //um geschwindigkeiten zu faken damit man sich die entsprechenden q-werte anschauen kann
 			if (Input.GetKey (KeyCode.Alpha0)) 
-				velo = 0;
-			if (Input.GetKey (KeyCode.Alpha1))
-				velo = 20;
-			if (Input.GetKey (KeyCode.Alpha2))
-				velo = 40;
-			if (Input.GetKey (KeyCode.Alpha3))
-				velo = 60;
-			if (Input.GetKey (KeyCode.Alpha4))
-				velo = 90;
-			if (Input.GetKey (KeyCode.Alpha5))
-				velo = 110;
-			if (Input.GetKey (KeyCode.Alpha6))
-				velo = 140;
-			if (Input.GetKey (KeyCode.Alpha7))
-				velo = 180;
-			if (Input.GetKey (KeyCode.Alpha8))
-				velo = 210;
-			if (Input.GetKey (KeyCode.Alpha9))
-				velo = 250;			
+				fake_speed = 0;
+			if (Input.GetKey (KeyCode.Alpha1)) 
+				fake_speed = 1;
+			if (Input.GetKey (KeyCode.Alpha2)) 
+				fake_speed = 2;
+			if (Input.GetKey (KeyCode.Alpha3)) 
+				fake_speed = 3;
+			if (Input.GetKey (KeyCode.Alpha4)) 
+				fake_speed = 4;
+			if (Input.GetKey (KeyCode.Alpha5)) 
+				fake_speed = 5;
+			if (Input.GetKey (KeyCode.Alpha6)) 
+				fake_speed = 6;
+			if (Input.GetKey (KeyCode.Alpha7)) 
+				fake_speed = 7;
+			if (Input.GetKey (KeyCode.Alpha8)) 
+				fake_speed = 8;
+			if (Input.GetKey (KeyCode.Alpha9)) 
+				fake_speed = 9;			
 		}
-		float[] SpeedSteerVec = new float[6] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection) };
+		if (fake_speed > -1) {
+			velo = fake_speed/9.0f * MAXSPEED;
+			velo2 = fake_speed/9.0f * MAXSPEED;
+			velo3 = fake_speed/9.0f * MAXSPEED;
+		}
+		float[] SpeedSteerVec = new float[9] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection), velo2, Tracking.getCarAngle(), velo3};
 		return SpeedSteerVec;
 	}
 
@@ -621,6 +628,14 @@ public class AiInterface : MonoBehaviour {
 			
 			while (q.Count > Limit)
 				q.Dequeue ();
+		}
+
+		public T Peek() {
+			try {
+				return q.Peek ();
+			} catch (InvalidOperationException E) {
+				return default(T);
+			}
 		}
 
 		public int getAverage() {
