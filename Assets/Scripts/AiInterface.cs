@@ -18,7 +18,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int updatepythonintervalms = 100;  //multiples of 25
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
 	public const int CREATE_VECS_ALL = 25;
-	public const int MAX_PYTHON_RT = 300;
+	public const int MAX_PYTHON_RT = 50;
 	public const bool fixedresultusagetime = true;
 	public const bool interpolateresults = false;
 
