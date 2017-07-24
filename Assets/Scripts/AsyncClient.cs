@@ -147,7 +147,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 			if (e is ObjectDisposedException || e is SocketException || e is NullReferenceException) {
 				//etabliere NEUE verbindung, die daten müssen schließlich rüber!
 				StartClientSocket (); //overwrites the old "socket", stays in this object(!)
-				AiInterface.print("This shouldn't happen too often DELETEME");
+				//AiInterface.print("This shouldn't happen too often DELETEME");
 				Send (socket, data);  
 			} else {
 				UnityEngine.Debug.Log(e.ToString());

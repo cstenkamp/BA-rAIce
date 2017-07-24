@@ -476,6 +476,10 @@ public class CarController : MonoBehaviour {
 			else
 				FreezeReasons.Remove (reason);
 			if (!FreezeReasons.Any()) {
+				if (AiInt.AIMode || Game.mode.Contains("train_AI")) {
+					AiInt.load_infos();
+					AiInt.lastgetvectortime = AiInterface.MSTime ();
+				}
 				Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
 				Game.UserInterface.UpdateGameModeDisp ();
 				Game.CarCamera.SetActive (true);

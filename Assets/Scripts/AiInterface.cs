@@ -67,6 +67,7 @@ public class AiInterface : MonoBehaviour {
 	public long lastgetvectortime;
 	public long lastresultusagetime;
 	public long lastsaviortime;
+	public int lagtime; //it may be that some MSTime-dependent functions slow the FPS down too much. If that happens for too long, I will reset them.
 	public string lastpythonsent;
 	public AsynchronousClient.Response lastUsedPythonResult;
 	public FixedSizedQueue<AsynchronousClient.Response> lastpythonresults;
@@ -106,9 +107,7 @@ public class AiInterface : MonoBehaviour {
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
-			lastpythonupdate =  UnityTime();
-			lastgetvectortime = MSTime();	
-			lastresultusagetime = UnityTime();	
+			resetTimes ();
 			lastpythonsent = "";
 			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
 			lastpythonresults = new FixedSizedQueue<AsynchronousClient.Response> (20);
@@ -116,6 +115,12 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
+	public void resetTimes() {
+		lastpythonupdate =  UnityTime();
+		lastgetvectortime = MSTime();	
+		lastresultusagetime = UnityTime();	
+		lagtime = 0;
+	}
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
@@ -127,6 +132,12 @@ public class AiInterface : MonoBehaviour {
 			if (currtime - lastsaviortime > 2000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
 				Car.UnQuickPause ("ConnectionDelay");
 				lastsaviortime = currtime;
+			}
+			if (((int)(1.0f / Time.smoothDeltaTime)) < 10) //if the FPS get too low, see what you can do.
+				lagtime += 1;
+			if (lagtime > 50) {
+				resetTimes ();
+				print ("Shouldn't happen too often DELETEME");
 			}
 
 			//RECEIVING the special commands from python
@@ -264,7 +275,7 @@ public class AiInterface : MonoBehaviour {
 
 
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		long currtime = MSTime ();
+		long currtime = MSTime (); //sollte MSTime bleiben...
 		if (Consts.debug_updateonlyifnew) {
 			Vector3 pos = Car.Car.position;
 			Quaternion rot = Car.Car.rotation;
