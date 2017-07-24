@@ -303,9 +303,10 @@ public class AsynchronousClient {  //updating python's value should happen async
 					if (othercommand == false) 
 						timestampReceive = AiInterface.MSTime();
 					othercommand = true;
-					if (newstr.IndexOf("STime(") > 0) {
+					if (newstr.IndexOf("CTime(") > 0)
+						newstr = newstr.Substring(0, newstr.IndexOf("CTime("));
+					if (newstr.IndexOf("STime(") > 0)
 						newstr = newstr.Substring(0, newstr.IndexOf("STime("));
-					}
 					command = newstr;
 				} else {
 					read = false;

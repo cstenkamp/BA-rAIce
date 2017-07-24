@@ -191,7 +191,7 @@ public class AiInterface : MonoBehaviour {
 							while (lastpythonresults.Peek() != null && lastpythonresults.Peek ().CTimestampStarted <= currUnTime - 2 * Consts.MAX_PYTHON_RT)  //get rid of the ones that are too old 
 								lastpythonresults.Dequeue ();
 							if (lastpythonresults.Peek () != null && lastpythonresults.Peek ().getContent ().Length > 1) {//look if there's a new one that fits
-								print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
+								//print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
 								float[] controls = Array.ConvertAll (lastpythonresults.Dequeue ().getContent ().Split (','), float.Parse); //use it, and remove it from the queue!
 								nn_throttle = controls [0];
 								nn_brake = controls [1];
