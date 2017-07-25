@@ -13,8 +13,8 @@ using System.Linq;
 public class Recorder : MonoBehaviour {
 
 	//this is only true in the "train AI supervisedly"-mode
-	public static bool sv_save_round = true;
-
+	public bool SV_SaveMode;
+	public float lasttrack;
 
 	// external scripts & stuff
 	public TimingScript Timing;
@@ -31,12 +31,16 @@ public class Recorder : MonoBehaviour {
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
 	//private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
-	private float lasttrack = 0;
 
+
+	public void StartedSV_SaveMode() {
+		SV_SaveMode = true;
+		lasttrack = AiInterface.UnityTime ();
+	}
 
 
 	void FixedUpdate() {
-		if (sv_save_round) {
+		if (SV_SaveMode) {
 			long currtime = AiInterface.UnityTime();
 			if (currtime - lasttrack >= Consts.trackAllXMS) {
 				lasttrack = lasttrack + Consts.trackAllXMS; 
@@ -63,7 +67,7 @@ public class Recorder : MonoBehaviour {
 		thisLap = new List<PointInTime>();
 		thisLap.Add(new PointInTime(0.0f, 0.0f));
 
-		if (sv_save_round) { 
+		if (SV_SaveMode) { 
 			SVLearnLap = new List<TrackingPoint> ();
 			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false, false);
 			SVLearnLap.Add (new TrackingPoint (0.0f, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 0.0f, data, (int) Mathf.Round(Car.velocity))); 
@@ -79,7 +83,7 @@ public class Recorder : MonoBehaviour {
 
 	//function SVLearnUpdateList, die jedes Frame (oder x mal die sekunde) gecallt wird (globaler param oben)
 	public void SVLearnUpdateList(){
-		if (sv_save_round) {
+		if (SV_SaveMode) {
 			string data = "STime(" + AiInterface.MSTime ().ToString () + ")" + AiInt.load_infos (false, false);
 			SVLearnLap.Add (new TrackingPoint (Timing.currentLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, Tracking.progress, data, (int) Mathf.Round(Car.velocity)));
 		}
@@ -96,7 +100,7 @@ public class Recorder : MonoBehaviour {
 			SaveLap(fastestLap, "fastlap");
 		}
 
-		if (sv_save_round) {
+		if (SV_SaveMode) {
 			string data = "STime(" + AiInterface.MSTime().ToString() + ")" + AiInt.load_infos (false	, false);
 			SVLearnLap.Add (new TrackingPoint (Timing.lastLapTime, Car.throttlePedalValue, Car.brakePedalValue, Car.steeringValue, 1.0f, data, (int) Mathf.Round(Car.velocity)));
 			string whodrove;
@@ -173,7 +177,7 @@ public class Recorder : MonoBehaviour {
 
 	public void SaveSVLearnLapStart(List<TrackingPoint> SVLearnLap, string fileName) 
 	{
-		if (sv_save_round) {
+		if (SV_SaveMode) {
 			int size1 = (int)((Camera)Car.Game.MiniMapCamera.GetComponent<Camera> ()).orthographicSize;
 			int size2 = Consts.secondcamera ? (int)((Camera)Car.Game.MiniMapCam2.GetComponent<Camera> ()).orthographicSize : 0; 
 			var t = new Thread (() => SaveSVLearnLap (SVLearnLap, fileName, size1, size2)); 
@@ -183,7 +187,7 @@ public class Recorder : MonoBehaviour {
 
 	public void SaveSVLearnLap(List<TrackingPoint> SVLearnLap, string fileName, int size1, int size2) 
 	{
-		if (sv_save_round) {
+		if (SV_SaveMode) {
 			if (!Directory.Exists ("SavedLaps/")) {
 				Debug.Log ("You have to create a folder 'SavedLaps' to save laps!");
 			} else {

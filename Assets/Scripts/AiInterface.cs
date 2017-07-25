@@ -30,7 +30,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
 	public const bool debug_makevalidafterwallhit = false;
-	public const bool debug_updateonlyifnew = false;
+	public const bool debug_updateonlyifnew = true;
 
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
@@ -67,7 +67,6 @@ public class AiInterface : MonoBehaviour {
 	public long lastgetvectortime;
 	public long lastresultusagetime;
 	public long lastsaviortime;
-	public int lagtime; //it may be that some MSTime-dependent functions slow the FPS down too much. If that happens for too long, I will reset them.
 	public string lastpythonsent;
 	public AsynchronousClient.Response lastUsedPythonResult;
 	public FixedSizedQueue<AsynchronousClient.Response> lastpythonresults;
@@ -119,7 +118,7 @@ public class AiInterface : MonoBehaviour {
 		lastpythonupdate =  UnityTime();
 		lastgetvectortime = MSTime();	
 		lastresultusagetime = UnityTime();	
-		lagtime = 0;
+		Rec.lasttrack = UnityTime ();
 	}
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
@@ -132,12 +131,6 @@ public class AiInterface : MonoBehaviour {
 			if (currtime - lastsaviortime > 2000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
 				Car.UnQuickPause ("ConnectionDelay");
 				lastsaviortime = currtime;
-			}
-			if (((int)(1.0f / Time.smoothDeltaTime)) < 10) //if the FPS get too low, see what you can do.
-				lagtime += 1;
-			if (lagtime > 50) {
-				resetTimes ();
-				print ("Shouldn't happen too often DELETEME");
 			}
 
 			//RECEIVING the special commands from python
@@ -285,6 +278,8 @@ public class AiInterface : MonoBehaviour {
 					lastCarRot = rot;
 					lastpythonsent = GetAllInfos ();
 					lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
+				} else {
+					lastgetvectortime = MSTime ();
 				}
 			} 
 		} else {
@@ -378,28 +373,28 @@ public class AiInterface : MonoBehaviour {
 
 		StringBuilder all = new StringBuilder(1900);
 
-		all.Append ("CTime("); all.Append (UnityTime().ToString()); all.Append (")");
+		all.Append ("CTime("+UnityTime().ToString()+")");
 
-		all.Append ("P("); all.Append (Math.Round(Tracking.progress * 100.0f ,3).ToString ()); all.Append(","); all.Append (Math.Round (Car.Timing.currentLapTime, 2).ToString ()); all.Append (","); all.Append (Car.Timing.lapCount.ToString ()); all.Append (","); all.Append (Car.lapClean.ToString () [0]); all.Append (")");
+		all.Append ("P("+Math.Round(Tracking.progress * 100.0f ,3).ToString ()+","+Math.Round (Car.Timing.currentLapTime, 2).ToString ()+","+Car.Timing.lapCount.ToString ()+","+Car.lapClean.ToString () [0]+")");
 
-		all.Append ("S("); all.Append (string.Join (",", GetSpeedSteer ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
+		all.Append ("S("+string.Join (",", GetSpeedSteer ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
 
-		all.Append ("T("); all.Append (string.Join (",", GetCarStatusVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
+		all.Append ("T("+string.Join (",", GetCarStatusVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
 
 		float tmp = Tracking.GetCenterDist ();
 		if (just_hit_wall) 
 			tmp = 11; //10 ist die distanz der mauer, aber da er ja direkt resettet weiß er es anderenfalls nicht mehr
-		all.Append ("C("); all.Append (Math.Round(tmp,3).ToString()); all.Append (","); all.Append (string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ())); all.Append (")");
+		all.Append ("C("+Math.Round(tmp,3).ToString()+","+string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ())+")");
 
-		all.Append ("L("); all.Append (string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())); all.Append (")");
+		all.Append ("L("+string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
 
-		all.Append ("D("); all.Append (Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ());  all.Append (")");
+		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
 
 		string visiondisp = Minmap.GetVisionDisplay ();
-		all.Append ("V1("); all.Append (visiondisp); all.Append (")");
+		all.Append ("V1("+visiondisp+")");
 
 		if (Consts.secondcamera)
-			all.Append ("V2("); all.Append (Minmap2.GetVisionDisplay ()); all.Append (")");
+			all.Append ("V2("+Minmap2.GetVisionDisplay ()+")");
 
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 

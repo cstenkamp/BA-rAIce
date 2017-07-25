@@ -252,6 +252,15 @@ public class CarController : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
 
 
+
+		if (Input.GetKeyDown(KeyCode.W)) {   
+			if (AiInt.AIMode || Game.Rec.SV_SaveMode) {
+				AiInt.resetTimes(); 
+				UnityEngine.Debug.Log ("does this help?");
+			}
+		}
+
+
 		// reconnect to server
 		if (Input.GetKeyDown(KeyCode.C)) {   
 			if (AiInt.AIMode) {
@@ -459,6 +468,7 @@ public class CarController : MonoBehaviour {
 	public void QuickPause(string reason) {
 		if (Game.mode.Contains ("driving")) {
 			FreezeReasons.Add (reason);
+			UnityEngine.Debug.Log ("Freezing because " + reason);
 			Game.mode = Game.mode.Where (val => val != "driving").ToArray ();
 			Game.UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
 			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
@@ -477,7 +487,7 @@ public class CarController : MonoBehaviour {
 				FreezeReasons.Remove (reason);
 			if (!FreezeReasons.Any()) {
 				if (AiInt.AIMode || Game.mode.Contains("train_AI")) {
-					AiInt.load_infos();
+					AiInt.load_infos(true, false);
 					AiInt.lastgetvectortime = AiInterface.MSTime ();
 				}
 				Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();

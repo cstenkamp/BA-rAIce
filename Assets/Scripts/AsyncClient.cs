@@ -323,8 +323,8 @@ public class AsynchronousClient {  //updating python's value should happen async
 						Car.shouldUnQuickpauseReason = "ConnectionDelay";
 						lastRTs.Clear ();
 					} else if (lastRTs.getAverage() > 2*Consts.MAX_PYTHON_RT) { //If there is too much of a delay from python, rather freeze the game
-						lastRTs.Dequeue();
 						//AiInterface.print("Freezing because of Connection Delay");
+						lastRTs.Clear (); //lastRTs.Dequeue();
 						Car.shouldQuickpauseReason = "ConnectionDelay";
 					}
 

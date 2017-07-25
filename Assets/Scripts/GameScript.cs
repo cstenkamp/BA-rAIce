@@ -21,6 +21,7 @@ public class GameScript : MonoBehaviour {
 	// Use this for initialization
 	void Start ()
 	{
+		ChangeDeltaTime ();
 		mode = new string[1]{"menu"};
 		CarCamera.SetActive(false);
 		MiniMapCamera.SetActive(false);
@@ -42,10 +43,22 @@ public class GameScript : MonoBehaviour {
 			Timing.fastestLapTime = Rec.fastestLap[Rec.fastestLap.Count-1].time;
 		}
 	}
-	
+
 	// Update is called once per frame
 	void Update ()
 	{
+	}
+
+	void ChangeDeltaTime() {
+		float tmpval = Time.timeScale;
+		if (SystemInfo.graphicsMemorySize > 2000)
+			tmpval = tmpval/2.0f;
+		if (tmpval >= 3)
+			Time.fixedDeltaTime = 0.01f;
+		else if (tmpval >= 1.5)
+			Time.fixedDeltaTime = 0.005f;
+		else 
+			Time.fixedDeltaTime = 0.002f;
 	}
 
 	// handle changes to the game mode
@@ -61,9 +74,9 @@ public class GameScript : MonoBehaviour {
 			AiInt.SenderClient.serverdown = true;
 		}
 
-		//TODO: diese 3 Zeilen müssen früher oder später weg.
+		//TODO: das "train_AI" hier muss früher oder später weg.
 		if (newMode == "driving") {
-			mode = new string[3]{ "driving", "train_AI", "keyboarddriving" };  
+			mode = new string[2]{ "driving", "keyboarddriving" };  
 		} else
 
 		if (newMode == "train_AI") {
@@ -75,7 +88,7 @@ public class GameScript : MonoBehaviour {
 		}
 		
 		AiInt.AIMode = false;
-		Recorder.sv_save_round = false;
+		Rec.SV_SaveMode = false;
 		CarCamera.SetActive (false);
 		MiniMapCamera.SetActive (false);
 		if (Consts.secondcamera) { MiniMapCam2.SetActive (false); }
@@ -97,7 +110,7 @@ public class GameScript : MonoBehaviour {
 		}
 
 		if (mode.Contains("train_AI")) {
-			Recorder.sv_save_round = true;
+			Rec.StartedSV_SaveMode();
 		} 
 
 		if (mode.Contains("drive_AI")) {
