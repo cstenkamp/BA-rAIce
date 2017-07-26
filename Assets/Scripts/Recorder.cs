@@ -34,6 +34,8 @@ public class Recorder : MonoBehaviour {
 
 	public void StartedSV_SaveMode() {
 		SV_SaveMode = true;
+		AiInt.Minmap.PrepareVision ();
+		AiInt.Minmap2.PrepareVision ();
 		AiInt.resetTimes ();
 	}
 

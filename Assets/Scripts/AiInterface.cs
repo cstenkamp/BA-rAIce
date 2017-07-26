@@ -104,6 +104,8 @@ public class AiInterface : MonoBehaviour {
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
 			resetTimes ();
+			Minmap.PrepareVision ();
+			Minmap2.PrepareVision ();
 			lastpythonsent = "";
 			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
 			lastpythonresults = new FixedSizedQueue<AsynchronousClient.Response> (20);
