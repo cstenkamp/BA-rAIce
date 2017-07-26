@@ -316,9 +316,14 @@ public class PositionTracking : MonoBehaviour {
 		float progressDistance = segmentLengthsPassed.Sum(); // lower bound for progress
 
 		// add the distance of relative progress within the current segment 
-		float currentSegmentProgress = progressRelative-Mathf.Floor(progressRelative);
-		progressDistance += currentSegmentProgress*segmentLengths[anchorPassed];
-		
+		float currentSegmentProgress;
+		try {
+			currentSegmentProgress = progressRelative-Mathf.Floor(progressRelative);
+			progressDistance += currentSegmentProgress*segmentLengths[anchorPassed];
+		} catch {
+			currentSegmentProgress = 0;
+		}
+
 		// return progress relative to track length
 		return progressDistance/trackLength;
 	}

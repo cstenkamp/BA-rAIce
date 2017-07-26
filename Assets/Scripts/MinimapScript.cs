@@ -18,7 +18,7 @@ public class MinimapScript : MonoBehaviour {
 	public GameScript Game;
 
 	public string GetVisionDisplay() {
-		if (!Game.AiInt.AIMode && !Game.mode.Contains ("train_AI")) {
+		if (!Game.AiInt.AIMode && !Game.Rec.SV_SaveMode) {
 			return "";
 		}
 
@@ -62,38 +62,41 @@ public class MinimapScript : MonoBehaviour {
 
 		StringBuilder alltext = new StringBuilder((Consts.visiondisplay_x*Consts.visiondisplay_y)+Consts.visiondisplay_x); //letztes für die kommas
 		StringBuilder currline = new StringBuilder(Consts.visiondisplay_y);
-
-		if (Consts.SeeCurbAsOff) {
-			
-			for (int i = 0; i < myImg.width; i++) {
-				currline = new StringBuilder(Consts.visiondisplay_y);
-				for (int j = 0; j < myImg.height; j++) {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						currline.Append("1");
-					else  											  //curb & off
-						currline.Append("0");
+		try {
+			if (Consts.SeeCurbAsOff) {
+				
+				for (int i = 0; i < myImg.width; i++) {
+					currline = new StringBuilder(Consts.visiondisplay_y);
+					for (int j = 0; j < myImg.height; j++) {
+						if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+							currline.Append("1");
+						else  											  //curb & off
+							currline.Append("0");
+					}
+					//clinenr = ParseIntBase3 (currline);
+					//alltext = alltext + clinenr.ToString("X") + ",";
+					alltext.Append(currline+",");
 				}
-				//clinenr = ParseIntBase3 (currline);
-				//alltext = alltext + clinenr.ToString("X") + ",";
-				alltext.Append(currline+",");
-			}
 
-		} else {
-			
-			for (int i = 0; i < myImg.width; i++) {
-				currline = new StringBuilder(Consts.visiondisplay_y);
-				for (int j = 0; j < myImg.height; j++) {
-					if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
-						currline.Append("2");
-					else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
-						currline.Append("1");
-					else 											  //off
-						currline.Append("0");
+			} else {
+				
+				for (int i = 0; i < myImg.width; i++) {
+					currline = new StringBuilder(Consts.visiondisplay_y);
+					for (int j = 0; j < myImg.height; j++) {
+						if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
+							currline.Append("2");
+						else if ((float)myImg.GetPixel (i, j).grayscale > 0.4) //curb
+							currline.Append("1");
+						else 											  //off
+							currline.Append("0");
+					}
+					//clinenr = ParseIntBase3 (currline);
+					//alltext = alltext + clinenr.ToString("X") + ",";
+					alltext.Append(currline+",");
 				}
-				//clinenr = ParseIntBase3 (currline);
-				//alltext = alltext + clinenr.ToString("X") + ",";
-				alltext.Append(currline+",");
 			}
+		} catch (Exception e) {
+			UnityEngine.Debug.Log ("Converting the Camera-img to string went wrong :o");
 		}
 		return alltext.ToString();
 	}

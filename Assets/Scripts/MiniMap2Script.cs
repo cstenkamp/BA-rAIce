@@ -10,7 +10,7 @@ public class MiniMap2Script : MonoBehaviour {
 	public GameScript Game;
 
 	public string GetVisionDisplay() {
-		if (!Game.AiInt.AIMode && !(Game.mode.Contains ("train_AI"))) {
+		if (!Game.AiInt.AIMode && !Game.Rec.SV_SaveMode) {
 			return "";
 		}
 		

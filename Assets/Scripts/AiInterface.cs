@@ -10,14 +10,13 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
+using System.IO;
 
 public static class Consts { //TODO: diese hier an python schicken!
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 100;  //multiples of 25
 	public const int trackAllXMS = 25;             //hier gehts ums sv-tracken (im recorder) 
-	public const int CREATE_VECS_ALL = 25;
 	public const int MAX_PYTHON_RT = 50;
 	public const bool fixedresultusagetime = true;
 	public const bool interpolateresults = false;
@@ -73,10 +72,8 @@ public class AiInterface : MonoBehaviour {
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
 
-
 	//these are only for plotting and seeing if everything is ok
 	public int lastunityinbetweentime;
-
 
 	public float nn_steer = 0;
 	public float nn_brake = 0;
@@ -102,7 +99,7 @@ public class AiInterface : MonoBehaviour {
 			UnityEngine.Debug.Log ("Started AI Mode");
 			SenderClient   = new AsynchronousClient(true, Car, this);
 			ReceiverClient = new AsynchronousClient(false, Car, this);
-			SendToPython ("resetServer", true);
+			SendToPython ("resetServer");
 			ConnectAsReceiver ();
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
@@ -116,7 +113,7 @@ public class AiInterface : MonoBehaviour {
 
 	public void resetTimes() {
 		lastpythonupdate =  UnityTime();
-		lastgetvectortime = MSTime();	
+		lastgetvectortime = UnityTime();	
 		lastresultusagetime = UnityTime();	
 		Rec.lasttrack = UnityTime ();
 	}
@@ -152,7 +149,6 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
-
 	// FixedUpdate is run every physics-timestep, which is independent of framerate and times precisely in Unity-time
 	void FixedUpdate() {
 		long currtime = MSTime ();
@@ -160,9 +156,7 @@ public class AiInterface : MonoBehaviour {
 
 		//SENDING data to python (all updatepythonintervalms ms)
 		if (AIMode) {
-			string tmp = load_infos (false, false);
-			if (tmp.Length > 0)
-				SendToPython (tmp, false);
+			LoadAndSendToPython (false);
 		}
 
 		//RECEIVING the result from python
@@ -182,7 +176,7 @@ public class AiInterface : MonoBehaviour {
 				}
 			}
 
-			//if you just added them in the upper part, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
+ 			//if you just added them in the upper part, here is where you take the fitting one (because fixed time & interpolating in between) (note that for this, unitytime is the relevant one)
 			if (Consts.fixedresultusagetime) {
 				if (Consts.interpolateresults) {
 					if (currUnTime - lastpythonresults.Peek().CTimestampStarted >= Consts.MAX_PYTHON_RT) {
@@ -257,7 +251,7 @@ public class AiInterface : MonoBehaviour {
 
 	public void punish_wallhit() {
 		if (AIMode) {
-			SendToPython ("wallhit", true); //ist das doppelt gemoppelt?
+			SendToPython ("wallhit"); //ist das doppelt gemoppelt?
 			just_hit_wall = true;
 		}
 	}
@@ -266,38 +260,57 @@ public class AiInterface : MonoBehaviour {
 	///////////////////////////////////////////////// Sending to python //////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
-
+	
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
-		long currtime = MSTime (); //sollte MSTime bleiben...
+		long currUnTime = UnityTime (); 
+		bool reload = true;
+        //hier waren originally sachen die verhindern sollten dass wenn drive_AI und train_AI-Modus gleichzeitig laufen die FUnktion zu oft aufgerufen wird sondern ggf das letzte result returned
+	    //wenn das laden kurz genug her ist... turns out das ist schlechter so.
+		//erstens weil das eh FPS-mäßig nix ändert, auch bei 40FPS, und zweitens weil dann die Loadallinfos nicht *genau* so lange her sind wie sie sollen, sondern >= so lange wie sie sollen, which is wrong.
 		if (Consts.debug_updateonlyifnew) {
 			Vector3 pos = Car.Car.position;
 			Quaternion rot = Car.Car.rotation;
-			if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
-				if (pos != lastCarPos || rot != lastCarRot) {
-					lastCarPos = pos;
-					lastCarRot = rot;
-					lastpythonsent = GetAllInfos ();
-					lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
-				} else {
-					lastgetvectortime = MSTime ();
-				}
-			} 
-		} else {
-			if (((currtime - lastgetvectortime > Consts.CREATE_VECS_ALL) || (force_reload)) && (!forbid_reload)) {
-				lastpythonsent = GetAllInfos ();
-				lastgetvectortime = lastgetvectortime + Consts.CREATE_VECS_ALL;
+			if (pos != lastCarPos || rot != lastCarRot) {
+				lastCarPos = pos;
+				lastCarRot = rot;
+			} else {
+				reload = false;
 			}
+		}
+		if (forbid_reload)
+			reload = false;
+		if (force_reload)
+			reload = true;
+		if (lastpythonsent == "")
+			reload = true;
+		
+		if (reload) {
+			lastpythonsent = GetAllInfos ();
+			lastgetvectortime = currUnTime;
 		}
 		return lastpythonsent;
 	}
 
+	public void LoadAndSendToPython(Boolean force) {
+		if (!AIMode) {return;}
+		long currUnTime = UnityTime ();
+
+		if (((currUnTime - lastpythonupdate >= Consts.updatepythonintervalms)) || (force)) { //FOR SENDING THE UNITYTIME IS RELEVANT; FOR MEASURING HOW LONG PYTHON TOOK THE REAL_TIME IS RELEVANT
+			just_hit_wall = false;
+			penultimatepythonupdate = lastpythonupdate;
+			lastunityinbetweentime = (int)(currUnTime - lastpythonupdate);
+			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms; //würde nicht so klappen wenn ich realtime nehmen würde
+			//print("SENDING REALTIME: " + currtime + "(" + (currUnTime-lastpythonupdate) + "ums after last)");
+			SendToPython(load_infos(false, false));
+		}
+	}
 
 
-	public void SendToPython(string data, Boolean force) {
+
+	public void SendToPython(string data) {
 		if (!AIMode) {return;}
 
 		long currtime = MSTime ();
-		long currUnTime = UnityTime ();
 		if (data == "resetServer") {
 			SenderClient.StartClientSocket ();
 			data += Consts.updatepythonintervalms; //hier weist er python auf die fps hin
@@ -305,17 +318,9 @@ public class AiInterface : MonoBehaviour {
 			data = "STime(" + currtime + ")" + data;
 		}
 
-		if (((currUnTime - lastpythonupdate >= Consts.updatepythonintervalms)) || (force)) { //FOR SENDING THE UNITYTIME IS RELEVANT; FOR MEASURING HOW LONG PYTHON TOOK THE REAL_TIME IS RELEVANT
-			if (data != "resetServer")
-				just_hit_wall = false;
+		var t =	 new Thread(() => SenderClient.SendAufJedenFall(data));
+		t.Start();
 
-			//print("SENDING REALTIME: " + currtime + "(" + (currUnTime-lastpythonupdate) + "ums after last)");
-			lastunityinbetweentime = (int)(currUnTime - lastpythonupdate);
-			var t =	 new Thread(() => SenderClient.SendAufJedenFall(data));
-			t.Start();
-			penultimatepythonupdate = lastpythonupdate;
-			lastpythonupdate = lastpythonupdate + Consts.updatepythonintervalms; //würde nicht so klappen wenn ich realtime nehmen würde
-		}
 	}
 
 
@@ -338,7 +343,7 @@ public class AiInterface : MonoBehaviour {
 		ReceiverClient.serverdown = false;
 		ReceiverClient.ResetServerConnectTrials();
 		ConnectAsReceiver ();
-		SendToPython ("resetServer", true);
+		SendToPython ("resetServer");
 	}
 
 

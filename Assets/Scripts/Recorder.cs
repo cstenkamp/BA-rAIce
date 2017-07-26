@@ -35,7 +35,7 @@ public class Recorder : MonoBehaviour {
 
 	public void StartedSV_SaveMode() {
 		SV_SaveMode = true;
-		lasttrack = AiInterface.UnityTime ();
+		AiInt.resetTimes ();
 	}
 
 
