@@ -8,6 +8,7 @@ using System.Linq;
 using UnityEngine.UI;
 
 //http://answers.unity3d.com/questions/27968/getpixels-of-rendertexture.html
+//https://stackoverflow.com/questions/32996534/rendering-complete-camera-view169-onto-a-texture-in-unity3d
 
 public class MinimapScript : MonoBehaviour {
 
@@ -16,6 +17,15 @@ public class MinimapScript : MonoBehaviour {
 //	public GameObject pixelParent;
 
 	public GameScript Game;
+	Rect standard; 
+
+	void Start() {
+		Camera cam = gameObject.GetComponent<Camera> ();
+		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
+		standard = new Rect(0.88f, 0.63f, 0.1f, 0.25f);
+		cam.rect = standard;
+	}
+
 
 	public string GetVisionDisplay() {
 		if (!Game.AiInt.AIMode && !Game.Rec.SV_SaveMode) {
@@ -23,11 +33,10 @@ public class MinimapScript : MonoBehaviour {
 		}
 
 		Camera cam = gameObject.GetComponent<Camera> ();
-		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
 
 		cam.rect = new Rect (0, 0, 1, 1);
 		RenderTexture myRT = new RenderTexture(Consts.visiondisplay_x, Consts.visiondisplay_y, 24);  //,RenderTextureFormat.ARGB32
-		myRT.Create();
+		//myRT.Create();
 		cam.targetTexture = myRT;
 		RenderTexture.active = myRT;
 		try {
@@ -42,9 +51,10 @@ public class MinimapScript : MonoBehaviour {
 			//		System.IO.File.WriteAllBytes("./picpicpic.png", bytes );
 
 
-			float displaywidth = 0.1f;
 			cam.targetTexture = null;
-			cam.rect = new Rect(0.88f, 0.6f, displaywidth, displaywidth/(0.66f*cam.aspect));
+			RenderTexture.active = null;
+			Destroy(myRT);
+			cam.rect = standard;
 
 			// return imgToArray(myImg); dann müsste man danach noch TwoDImageToStr aufrufen, aber das ist sinnlos
 			return imgToStr(myImg);

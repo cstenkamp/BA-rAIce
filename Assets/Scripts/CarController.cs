@@ -3,6 +3,7 @@ using System.Collections;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
 
 public class CarController : MonoBehaviour {
 
@@ -250,16 +251,6 @@ public class CarController : MonoBehaviour {
 
 		// pause & exit to menu
 		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
-
-
-
-		if (Input.GetKeyDown(KeyCode.W)) {   
-			if (AiInt.AIMode || Game.Rec.SV_SaveMode) {
-				AiInt.resetTimes(); 
-				UnityEngine.Debug.Log ("does this help?");
-			}
-		}
-
 
 		// reconnect to server
 		if (Input.GetKeyDown(KeyCode.C)) {   

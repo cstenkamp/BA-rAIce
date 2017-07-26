@@ -288,8 +288,10 @@ public class AiInterface : MonoBehaviour {
 			lastpythonsent = GetAllInfos ();
 			lastgetvectortime = currUnTime;
 		}
+
 		return lastpythonsent;
 	}
+
 
 	public void LoadAndSendToPython(Boolean force) {
 		if (!AIMode) {return;}

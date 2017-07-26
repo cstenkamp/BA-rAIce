@@ -32,7 +32,6 @@ public class Recorder : MonoBehaviour {
 	public List<TrackingPoint> SVLearnLap;
 	//private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
 
-
 	public void StartedSV_SaveMode() {
 		SV_SaveMode = true;
 		AiInt.resetTimes ();
