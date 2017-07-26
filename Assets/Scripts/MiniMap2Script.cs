@@ -25,6 +25,8 @@ public class MiniMap2Script : MonoBehaviour {
 			sendRect = new Rect (0, 0, 1, 1);
 			readRect = new Rect (0, 0, Consts.visiondisp2_x, Consts.visiondisp2_y);
 			myRT = new RenderTexture (Consts.visiondisp2_x, Consts.visiondisp2_y, 24);
+			myRT.Create ();
+			myImg = new Texture2D (Consts.visiondisp2_x, Consts.visiondisp2_y, TextureFormat.RGB24, false); //false = no mipmaps
 		}
 	}
 
@@ -38,12 +40,10 @@ public class MiniMap2Script : MonoBehaviour {
 		if (cam.enabled) {
 			
 			cam.rect = sendRect;
-			myRT.Create ();
 			cam.targetTexture = myRT;
 			RenderTexture.active = myRT;
 			try {
 				cam.Render (); 
-				myImg = new Texture2D (Consts.visiondisp2_x, Consts.visiondisp2_y, TextureFormat.RGB24, false); //false = no mipmaps
 				RenderTexture.active = myRT;
 				myImg.ReadPixels (readRect, 0, 0); //"the center section"
 				myImg.Apply (false);
