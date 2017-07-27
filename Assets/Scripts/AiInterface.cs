@@ -34,6 +34,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
+	public const bool usecameras = true;
 	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
 	public const bool SeeCurbAsOff = false;
 }
@@ -104,8 +105,10 @@ public class AiInterface : MonoBehaviour {
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
 			resetTimes ();
-			Minmap.PrepareVision ();
-			Minmap2.PrepareVision ();
+			if (Consts.usecameras) {
+				Minmap.PrepareVision ();
+				Minmap2.PrepareVision ();
+			}
 			lastpythonsent = "";
 			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
 			lastpythonresults = new FixedSizedQueue<AsynchronousClient.Response> (20);
@@ -399,12 +402,13 @@ public class AiInterface : MonoBehaviour {
 
 		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
 
-		string visiondisp = Minmap.GetVisionDisplay ();
-		all.Append ("V1("+visiondisp+")");
+		if (Consts.usecameras) {
+			all.Append ("V1(" +  Minmap.GetVisionDisplay () + ")");
 
-		if (Consts.secondcamera)
-			all.Append ("V2("+Minmap2.GetVisionDisplay ()+")");
-
+			if (Consts.secondcamera)
+				all.Append ("V2(" + Minmap2.GetVisionDisplay () + ")");
+		}
+		
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
 		//TODO: gucken welche vektoren ich brauche
@@ -412,10 +416,7 @@ public class AiInterface : MonoBehaviour {
 		//TODO: vom carstatusvektor fehlen noch ganz viele
 
 
-		if (visiondisp.Length == 0) //when not drivingmode yet
-			return "";
-		else  
-			return all.ToString ();
+		return all.ToString ();
 	}
 
 
@@ -696,6 +697,12 @@ public class AiInterface : MonoBehaviour {
 	public static long UnityTime() {
 		return (long)(Time.time * 1000);
 	}
+
+	public static long UTCTime() {
+		//https://www.epochconverter.com/ according to my ticket https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k, this is all fixed in the update in 2 weeks
+		return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+	}
+
 
 	public static void KillOtherThreads() {
 		ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;

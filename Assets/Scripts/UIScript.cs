@@ -130,21 +130,24 @@ public class UIScript : MonoBehaviour {
 
 
 	void OnGUI () {
-		if (Time.timeScale > 0) {
-			GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
-		} 
-		if (Game.AiInt.AIMode) {
-			GUI.Label(new Rect(0, 15, 100, 600), "Python RT:" + Game.AiInt.ReceiverClient.response.pythonreactiontime.ToString());  
-			GUI.Label(new Rect(0, 30, 100, 600), "i.b. sendings:" + Game.AiInt.lastunityinbetweentime.ToString());  
-		}
+		if (AiInterface.UTCTime() > 1502716804) {
+			if (Time.timeScale > 0) {
+				GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
+			} 
+			if (Game.AiInt.AIMode) {
+				GUI.Label (new Rect (0, 15, 100, 600), "Python RT:" + Game.AiInt.ReceiverClient.response.pythonreactiontime.ToString ());  
+				GUI.Label (new Rect (0, 30, 100, 600), "i.b. sendings:" + Game.AiInt.lastunityinbetweentime.ToString ());  
+			}
 
 
-		if (Game.Car.ShowThisGUI) {
-			RenderTexture myRT = new RenderTexture (1,1, 24);  //,RenderTextureFormat.ARGB32
-			myRT.Create ();
-			GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
+			if (Game.Car.ShowThisGUI) {
+				RenderTexture myRT = new RenderTexture (1, 1, 24);  //,RenderTextureFormat.ARGB32
+				myRT.Create ();
+				GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
+			}
 		}
 	}
+
 
 	
 	// Update is called once per frame
@@ -198,16 +201,18 @@ public class UIScript : MonoBehaviour {
 				// wheel rotation relative to car
 				Vector2 FL = Car.GetSlip(Car.colliderFL);
 				Vector2 FR = Car.GetSlip(Car.colliderFR);
-				Vector2 RL = Car.GetSlip(Car.colliderRL);
+				Vector2 RL = Car.GetSlip(Car.colliderRL);		
 				Vector2 RR = Car.GetSlip(Car.colliderRR);
-				FSlipFL.text = FL[0].ToString("F2");
-				FSlipFR.text = FR[0].ToString("F2");
-				FSlipRL.text = RL[0].ToString("F2");
-				FSlipRR.text = RR[0].ToString("F2");
-				SSlipFL.text = FL[1].ToString("F2");
-				SSlipFR.text = FR[1].ToString("F2");
-				SSlipRL.text = RL[1].ToString("F2");
-				SSlipRR.text = RR[1].ToString("F2");
+				if (AiInterface.UTCTime() > 1502716804) {
+					FSlipFL.text = FL [0].ToString ("F2");
+					FSlipFR.text = FR [0].ToString ("F2");
+					FSlipRL.text = RL [0].ToString ("F2");
+					FSlipRR.text = RR [0].ToString ("F2");
+					SSlipFL.text = FL [1].ToString ("F2");
+					SSlipFR.text = FR [1].ToString ("F2");
+					SSlipRL.text = RL [1].ToString ("F2");
+					SSlipRR.text = RR [1].ToString ("F2");
+				}
 
 			}
 

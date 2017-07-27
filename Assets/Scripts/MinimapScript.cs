@@ -42,7 +42,7 @@ public class MinimapScript : MonoBehaviour {
 
 
 	public string GetVisionDisplay() {
-		if (!Game.AiInt.AIMode && !Game.Rec.SV_SaveMode) {
+		if ((!Game.AiInt.AIMode && !Game.Rec.SV_SaveMode) || !Consts.usecameras) {
 			return "";
 		}
 
