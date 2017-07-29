@@ -112,7 +112,9 @@ public class Recorder : MonoBehaviour {
 			} else {
 				whodrove = "_AI";
 			}
-			SaveSVLearnLapStart (SVLearnLap, "complete_" + (Consts.secondcamera ? "2cam_" : "1cam_") + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__"  + Math.Round((Timing.lastLapTime*10)).ToString() + whodrove); 
+			string numcams = (Consts.usecameras ? (Consts.secondcamera ? "2cam_" : "1cam_") : "0cam");
+			string fileName = "complete_" + numcams + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__" + Math.Round ((Timing.lastLapTime * 10)).ToString () + whodrove;
+			SaveSVLearnLapStart (SVLearnLap, fileName); 
 		}
 	}
 
@@ -181,8 +183,13 @@ public class Recorder : MonoBehaviour {
 	public void SaveSVLearnLapStart(List<TrackingPoint> SVLearnLap, string fileName) 
 	{
 		if (SV_SaveMode) {
-			int size1 = (int)((Camera)Car.Game.MiniMapCamera.GetComponent<Camera> ()).orthographicSize;
-			int size2 = Consts.secondcamera ? (int)((Camera)Car.Game.MiniMapCam2.GetComponent<Camera> ()).orthographicSize : 0; 
+			int size1; int size2;
+			if (Consts.usecameras) {
+				size1 = (int)((Camera)Car.Game.MiniMapCamera.GetComponent<Camera> ()).orthographicSize;
+				size2 = Consts.secondcamera ? (int)((Camera)Car.Game.MiniMapCam2.GetComponent<Camera> ()).orthographicSize : 0;
+			} else {
+				size1 = 0; size2 = 0;
+			}
 			var t = new Thread (() => SaveSVLearnLap (SVLearnLap, fileName, size1, size2)); 
 			t.Start ();
 		}

@@ -29,7 +29,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
 	public const bool debug_makevalidafterwallhit = false;
-	public const bool debug_updateonlyifnew = true;
+	public const bool debug_updateonlyifnew = false;
 
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
@@ -72,6 +72,7 @@ public class AiInterface : MonoBehaviour {
 	public FixedSizedQueue<AsynchronousClient.Response> lastpythonresults;
 	public Vector3 lastCarPos;
 	public Quaternion lastCarRot;
+	public String lastCarAct;
 
 	//these are only for plotting and seeing if everything is ok
 	public int lastunityinbetweentime;
@@ -167,11 +168,12 @@ public class AiInterface : MonoBehaviour {
 		//RECEIVING the result from python
 		if (AIMode && !HumanTakingControl) {
 			
-			//only the commands on how to drive, as special commands need to also run when frozen (!)
+			//only the commands on how to drive, as special commands need to also run when frozen (hence in update)
 			string message = ReceiverClient.response.getContent();
 			if (message.Length > 5) {
 				if (Consts.fixedresultusagetime) {
 					if (!ReceiverClient.response.used)
+						//print (ReceiverClient.response.getContent()); //(ohne HumanTakingControl) sieht man hier manchmal dass //python ihn los fahren lassen möchte er aber nicht will..!
 						lastpythonresults.Enqueue (ReceiverClient.response.Clone());
 				} else {
 					float[] controls = Array.ConvertAll (message.Split (','), float.Parse);
@@ -194,7 +196,7 @@ public class AiInterface : MonoBehaviour {
 							while (lastpythonresults.Peek() != null && lastpythonresults.Peek ().CTimestampStarted <= currUnTime - 2 * Consts.MAX_PYTHON_RT)  //get rid of the ones that are too old 
 								lastpythonresults.Dequeue ();
 							if (lastpythonresults.Peek () != null && lastpythonresults.Peek ().getContent ().Length > 1) {//look if there's a new one that fits
-								//print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
+								print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
 								float[] controls = Array.ConvertAll (lastpythonresults.Dequeue ().getContent ().Split (','), float.Parse); //use it, and remove it from the queue!
 								nn_throttle = controls [0];
 								nn_brake = controls [1];
@@ -275,13 +277,19 @@ public class AiInterface : MonoBehaviour {
 		if (Consts.debug_updateonlyifnew) {
 			Vector3 pos = Car.Car.position;
 			Quaternion rot = Car.Car.rotation;
-			if (pos != lastCarPos || rot != lastCarRot) {
+			String act = ("" + Math.Round (Car.throttlePedalValue, 3) + "," + Math.Round (Car.brakePedalValue, 3) + "," + Math.Round (Car.steeringValue, 3));
+
+			if (pos != lastCarPos || rot != lastCarRot || act != lastCarAct) {
 				lastCarPos = pos;
 				lastCarRot = rot;
+				lastCarAct = act;
 			} else {
 				reload = false;
 			}
 		}
+		if (Input.GetKey (KeyCode.Alpha0) || Input.GetKey (KeyCode.Alpha1) || Input.GetKey (KeyCode.Alpha2) || Input.GetKey (KeyCode.Alpha3) || Input.GetKey (KeyCode.Alpha4) ||
+		      Input.GetKey (KeyCode.Alpha5) || Input.GetKey (KeyCode.Alpha6) || Input.GetKey (KeyCode.Alpha7) || Input.GetKey (KeyCode.Alpha8) || Input.GetKey (KeyCode.Alpha9))
+			reload = true;
 		if (forbid_reload)
 			reload = false;
 		if (force_reload)
@@ -378,6 +386,7 @@ public class AiInterface : MonoBehaviour {
 		//		C: CenterDistVec (rounded to 4)
 		//		L: LookAheadVec  (rounded to 4)
 		//		D: Delta & Feedback
+		//		A: Action in Unity (may be different than what python asked for because of humantakingcontrol)
 		//	   V1: VisionVector1 (converted to decimal)
 		//	   V2: VisionVector2 (converted to decimal) (if needed)
 		//		R: Progress as a vector (rounded to 4) 
@@ -401,6 +410,8 @@ public class AiInterface : MonoBehaviour {
 		all.Append ("L("+string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
 
 		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
+
+		all.Append ("A(" + Math.Round (Car.throttlePedalValue, 3)+","+Math.Round (Car.brakePedalValue, 3)+","+Math.Round (Car.steeringValue, 3)+")");
 
 		if (Consts.usecameras) {
 			all.Append ("V1(" +  Minmap.GetVisionDisplay () + ")");
@@ -453,6 +464,7 @@ public class AiInterface : MonoBehaviour {
 			velo = fake_speed/9.0f * MAXSPEED;
 			velo2 = fake_speed/9.0f * MAXSPEED;
 			velo3 = fake_speed/9.0f * MAXSPEED;
+			Game.UserInterface.Speedometer.text = velo.ToString() + " kph";
 		}
 		float[] SpeedSteerVec = new float[9] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection), velo2, Tracking.getCarAngle(), velo3};
 		return SpeedSteerVec;

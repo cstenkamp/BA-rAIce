@@ -485,6 +485,8 @@ public class CarController : MonoBehaviour {
 				Game.UserInterface.UpdateGameModeDisp ();
 				Game.CarCamera.SetActive (true);
 				Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
+				if (AiInt.AIMode)
+					AiInt.load_infos (false, true);
 			}
 		}
 	}
