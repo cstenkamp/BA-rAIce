@@ -277,6 +277,7 @@ public class CarController : MonoBehaviour {
 
 	public void ResetCar(bool send_python) {
 		UnityEngine.Debug.Log ("Car resettet" + DateTime.Now.ToString());
+		Game.Timing.Stop_Round ();
 		ResetToPosition (startPosition, startRotation, false, send_python);
 	}
 

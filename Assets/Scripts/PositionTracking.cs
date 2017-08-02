@@ -281,6 +281,8 @@ public class PositionTracking : MonoBehaviour {
 
 		// convert track progress from anchor-based to meters to percent
 		float progress = ProgressConvert(progressInAnchors,segmentLengths); // progress from 0 to 1
+		if (!Car.Timing.activeLap)
+			progress = progress - 1.0f;
 		return progress;
 	}
 

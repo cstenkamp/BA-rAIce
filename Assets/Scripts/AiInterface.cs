@@ -37,6 +37,8 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool usecameras = true;
 	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
 	public const bool SeeCurbAsOff = false;
+
+	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 }
 
 //================================================================================
@@ -137,20 +139,18 @@ public class AiInterface : MonoBehaviour {
 			}
 
 			//RECEIVING the special commands from python
-			if (AIMode && !HumanTakingControl) {
-				//handle special commands...
-				if (ReceiverClient.response.othercommand) {
-					if (ReceiverClient.response.command == "pleasereset") { 
-						Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
-						ReceiverClient.response.othercommand = false;
-					}
-					if (ReceiverClient.response.command == "pleaseFreeze") { 
-						Car.QuickPause ("Python");
-					}
-					if (ReceiverClient.response.command == "pleaseUnFreeze") { 
-						Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
-					} 
+			//handle special commands...
+			if (ReceiverClient.response.othercommand) {
+				if (ReceiverClient.response.command == "pleasereset") { 
+					Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 				}
+				if (ReceiverClient.response.command == "pleaseFreeze") { 
+					Car.QuickPause ("Python");
+				}
+				if (ReceiverClient.response.command == "pleaseUnFreeze") { 
+					Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
+				} 
+				ReceiverClient.response.othercommand = false;
 			}
 		}
 	}
@@ -196,7 +196,7 @@ public class AiInterface : MonoBehaviour {
 							while (lastpythonresults.Peek() != null && lastpythonresults.Peek ().CTimestampStarted <= currUnTime - 2 * Consts.MAX_PYTHON_RT)  //get rid of the ones that are too old 
 								lastpythonresults.Dequeue ();
 							if (lastpythonresults.Peek () != null && lastpythonresults.Peek ().getContent ().Length > 1) {//look if there's a new one that fits
-								print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
+								//print ("It is: "+currUnTime + " using the result from "+(currUnTime - lastpythonresults.Peek ().CTimestampStarted)+ "ms ago. (" + lastpythonresults.length + "items in Buffer)");
 								float[] controls = Array.ConvertAll (lastpythonresults.Dequeue ().getContent ().Split (','), float.Parse); //use it, and remove it from the queue!
 								nn_throttle = controls [0];
 								nn_brake = controls [1];
@@ -263,11 +263,16 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
+	public void EndRound(bool lapClean) {
+		if (AIMode) {
+			SendToPython("endround"+(lapClean?"1":"0"));
+		}
+	}
+
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////// Sending to python //////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
-	
 	public string load_infos(Boolean force_reload, Boolean forbid_reload) {
 		long currUnTime = UnityTime (); 
 		bool reload = true;
@@ -425,7 +430,6 @@ public class AiInterface : MonoBehaviour {
 		//TODO: gucken welche vektoren ich brauche
 		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
-
 
 		return all.ToString ();
 	}

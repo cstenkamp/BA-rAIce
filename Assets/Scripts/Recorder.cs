@@ -116,6 +116,8 @@ public class Recorder : MonoBehaviour {
 			string fileName = "complete_" + numcams + DateTime.Now.ToString ("yy_MM_dd__hh_mm_ss") + "__" + Math.Round ((Timing.lastLapTime * 10)).ToString () + whodrove;
 			SaveSVLearnLapStart (SVLearnLap, fileName); 
 		}
+		if (Consts.trainAIMode_RestartAfterRound && SV_SaveMode) 
+			Car.ResetCar (false);
 	}
 
 	// ##################################

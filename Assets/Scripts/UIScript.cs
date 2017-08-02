@@ -157,7 +157,7 @@ public class UIScript : MonoBehaviour {
 		DrivingOverlayHandling();
 	}
 
-	void DrivingOverlayHandling()
+	public void DrivingOverlayHandling()
 	{
 
 		if (Game.mode.Contains("menu") && drivingOverlayActive == true) {  //TODO: wenn es ein anderes Pausenmenü gibt: das hier splitten.

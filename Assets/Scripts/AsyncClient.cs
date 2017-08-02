@@ -299,36 +299,38 @@ public class AsynchronousClient {  //updating python's value should happen async
 
 		public void update(String newstr){
 			try {
-				if (newstr.Substring (0, 1) != "[") {
-					if (othercommand == false) 
+				if (!othercommand) { //make sure othercommands are handled
+					if (newstr.Substring (0, 1) != "[") {
+						if (othercommand == false) 
+							timestampReceive = AiInterface.MSTime();
+						othercommand = true;
+						if (newstr.IndexOf("CTime(") > 0)
+							newstr = newstr.Substring(0, newstr.IndexOf("CTime("));
+						if (newstr.IndexOf("STime(") > 0)
+							newstr = newstr.Substring(0, newstr.IndexOf("STime("));
+						command = newstr;
+					} else {
+						read = false;
+						used = false;
+						pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
+						String tmp = newstr.Substring (newstr.IndexOf ("CTime(")+6); CTimestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")"))); //this is Unity-time, such that a result comes definitely to the specified time.
+						tmp = newstr.Substring (newstr.IndexOf ("STime(")+6); timestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")")));  //this is realtime, to calculate how fast the PC is.
 						timestampReceive = AiInterface.MSTime();
-					othercommand = true;
-					if (newstr.IndexOf("CTime(") > 0)
-						newstr = newstr.Substring(0, newstr.IndexOf("CTime("));
-					if (newstr.IndexOf("STime(") > 0)
-						newstr = newstr.Substring(0, newstr.IndexOf("STime("));
-					command = newstr;
-				} else {
-					read = false;
-					used = false;
-					pedals = newstr.Substring (0, newstr.IndexOf ("]")+1);
-					String tmp = newstr.Substring (newstr.IndexOf ("CTime(")+6); CTimestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")"))); //this is Unity-time, such that a result comes definitely to the specified time.
-					tmp = newstr.Substring (newstr.IndexOf ("STime(")+6); timestampStarted = long.Parse(tmp.Substring(0, tmp.IndexOf(")")));  //this is realtime, to calculate how fast the PC is.
-					timestampReceive = AiInterface.MSTime();
-					pythonreactiontime = (int)(timestampReceive-timestampStarted);
-					//AiInterface.print ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + pythonreactiontime + "ms)" );
-					lastRTs.Enqueue(pythonreactiontime);
-					if (timestampStarted == AiInt.lastpythonupdate || timestampStarted == AiInt.penultimatepythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
-						//AiInterface.print("Unfreezing because Connection Delay resolved");
-						Car.shouldUnQuickpauseReason = "ConnectionDelay";
-						lastRTs.Clear ();
-					} else if (lastRTs.getAverage() > 2*Consts.MAX_PYTHON_RT) { //If there is too much of a delay from python, rather freeze the game
-						//AiInterface.print("Freezing because of Connection Delay");
-						lastRTs.Clear (); //lastRTs.Dequeue();
-						Car.shouldQuickpauseReason = "ConnectionDelay";
-					}
+						pythonreactiontime = (int)(timestampReceive-timestampStarted);
+						//AiInterface.print ("RECEIVING " + timestampStarted + " @ " + timestampReceive + "(" + pythonreactiontime + "ms)" );
+						lastRTs.Enqueue(pythonreactiontime);
+						if (timestampStarted == AiInt.lastpythonupdate || timestampStarted == AiInt.penultimatepythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
+							//AiInterface.print("Unfreezing because Connection Delay resolved");
+							Car.shouldUnQuickpauseReason = "ConnectionDelay";
+							lastRTs.Clear ();
+						} else if (lastRTs.getAverage() > 2*Consts.MAX_PYTHON_RT) { //If there is too much of a delay from python, rather freeze the game
+							//AiInterface.print("Freezing because of Connection Delay");
+							lastRTs.Clear (); //lastRTs.Dequeue();
+							Car.shouldQuickpauseReason = "ConnectionDelay";
+						}
 
-					othercommand = false;
+						othercommand = false;
+					}
 				}
 			} catch (ArgumentOutOfRangeException e) {
 				UnityEngine.Debug.Log ("error: " + e.ToString ());
