@@ -39,7 +39,7 @@ public class TimingScript : MonoBehaviour {
 	}
 
 	// Start/ finish collider updating the laptimes
-	void OnTriggerEnter (Collider other)            //"this" here is the timingsystem, a collider in root, and the only "other" there is that can move is only the car
+	void OnTriggerExit (Collider other)            //"this" here is the timingsystem, a collider in root, and the only "other" there is that can move is only the car
 	{
 		if (!justResettet) { //wenn das hier nicht ist kann der sich nach wallhit-reset direkt hiervor projizieren und wäre done, which is wrong
 			justResettet = false;

@@ -283,6 +283,10 @@ public class PositionTracking : MonoBehaviour {
 		float progress = ProgressConvert(progressInAnchors,segmentLengths); // progress from 0 to 1
 		if (!Car.Timing.activeLap)
 			progress = progress - 1.0f;
+		if (Car.Timing.activeLap && !Car.Timing.ccPassed && progress > 0.5f)
+			progress -= 1.0f;
+		if (progress < -0.99f)
+			progress += 1.0f;
 		return progress;
 	}
 
