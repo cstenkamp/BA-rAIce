@@ -147,14 +147,15 @@ public class CarController : MonoBehaviour {
 				brakePedalValue = 0;
 			}
 
+			int SpeedMultiplier = 1;
 			if (Consts.maxSpeed > 0) { //makes the game a hella lot easier.
 				if (velocity > Consts.maxSpeed) {
-					throttlePedalValue = 0;
+					SpeedMultiplier = 0;
 				}
 			}
 
-			colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear; 	 	
-			colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear;
+			colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear * SpeedMultiplier; 	 	
+			colliderRR.motorTorque = maxMotorTorque * throttlePedalValue * gear * SpeedMultiplier;
 			// brake
 			colliderFL.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
 			colliderFR.brakeTorque = maxBrakeTorque * brakePedalValue * BrakeBias;
