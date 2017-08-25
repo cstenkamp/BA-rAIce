@@ -90,7 +90,13 @@ public class PositionTracking : MonoBehaviour {
 		} catch (IndexOutOfRangeException) {
 			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[0], Vector3.up); 
 		}
-		return Mathf.Round (Quaternion.Angle (Angle, Car.transform.rotation) * 100) / 100;
+		var forwardA = (Angle*Vector3.forward);
+		var forwardB = (Car.transform.rotation*Vector3.forward);
+		float angleA = Mathf.Atan2(forwardA.x, forwardA.z) * Mathf.Rad2Deg;
+		float angleB = Mathf.Atan2(forwardB.x, forwardB.z) * Mathf.Rad2Deg;
+		float angleDiff = Mathf.Round (Mathf.DeltaAngle(angleA, angleB)* 100) / 100;
+		//float tmp = Mathf.Round (Quaternion.Angle (Angle, Car.transform.rotation) * 100) / 100; //is only absolute!
+		return angleDiff;
 	}
 
 
