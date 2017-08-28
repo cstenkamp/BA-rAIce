@@ -1,8 +1,4 @@
-﻿/// <summary>
-/// MAIN TODO HERE:
-/// 1) Gucken was ich mache wenn MAXAGEPYTHONRESULT überschritten ist
-/// </summary>
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System;
 using System.Threading;
