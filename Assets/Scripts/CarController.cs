@@ -36,7 +36,7 @@ public class CarController : MonoBehaviour {
 
 	public Rigidbody Car;
 
-	float maxMotorTorque = 1200.0f;
+	public float maxMotorTorque = 1200.0f;
 	float maxBrakeTorque = 3300.0f;
 	float maxSteer = 20.0f;
 
@@ -52,7 +52,7 @@ public class CarController : MonoBehaviour {
 	float deltaPositionPerpendicular;
 	float deltaTime;
 	public float velocity;
-	public float velocity_perpendicular;
+	public float velocityOfPerpendiculars;
 	public List<string> FreezeReasons;
 	public string shouldQuickpauseReason = "";
 	public string shouldUnQuickpauseReason = ""; //they would be bools, but as I also need to specify the reason, they're strings ("" or content)
@@ -115,8 +115,10 @@ public class CarController : MonoBehaviour {
 			deltaTime = Time.time - lastTime;
 			deltaPosition = Vector3.Distance (lastPosition, transform.position);
 			deltaPositionPerpendicular = Vector3.Distance (lastPerpendicularPosition, Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position)); 
-			velocity = deltaPosition / deltaTime * 3.6f;
-			velocity_perpendicular = deltaPositionPerpendicular / deltaTime * 3.6f;
+			//velocity = deltaPosition / deltaTime * 3.6f; If you leave it like this, the velocity will be incredibly high after a reset, leading to the ANN not learning. Took me 3 month to find this.
+			velocity = Car.velocity.magnitude*3.6f;
+			velocityOfPerpendiculars = deltaPositionPerpendicular / deltaTime * 3.6f;
+			velocityOfPerpendiculars = (velocityOfPerpendiculars > velocity ? GetSpeedInDir()[0] : velocityOfPerpendiculars); //for safety, I'm pretty sure theres no reason anymore they are faster, but this is safer.
 			lastPosition = transform.position;
 			lastPerpendicularPosition = Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position);
 			lastTime = Time.time;
@@ -172,11 +174,27 @@ public class CarController : MonoBehaviour {
 		return (x%m + m)%m;
 	}
 
-	public float GetSpeedInStreetDir() 
+	public float[] GetSpeedInDir() 
 	{
-		Vector3 Vecbehind = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position), Timing.Rec.Tracking.anchorVector.Length-1)];
-		Vector3 Vecbefore = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+1, Timing.Rec.Tracking.anchorVector.Length-1)];
-		return Mathf.Round ((Vector3.Dot (Car.velocity, (Vecbefore - Vecbehind).normalized))*3.6f * 100) / 100;		
+		Vector3 Vecbehind = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)-1, Timing.Rec.Tracking.anchorVector.Length-1)];
+		Vector3 Vec1before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+1, Timing.Rec.Tracking.anchorVector.Length-1)]; 
+		Vector3 Vec4before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+4, Timing.Rec.Tracking.anchorVector.Length-1)]; 
+		Vector3 Vec8before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+8, Timing.Rec.Tracking.anchorVector.Length-1)]; 
+
+		Vector3 shortStreetDir = (Vec1before - Vecbehind).normalized; shortStreetDir /= shortStreetDir.magnitude;
+		Vector3 longStreetDir = (Vec8before - Vec1before).normalized; longStreetDir /= longStreetDir.magnitude;
+
+		Vector3 traverseDir = Vector3.Cross(shortStreetDir, Vector3.up); traverseDir /= traverseDir.magnitude;
+
+		float sign = (Vector3.Dot (traverseDir, longStreetDir) > 0) ? -1.0f : 1.0f;
+		float CurvinessBeforeCar = Mathf.Round ((Vector3.Dot (shortStreetDir, longStreetDir))* 100) / 100;
+		CurvinessBeforeCar = (1.0f-CurvinessBeforeCar)*sign;
+
+		float inStreetDir = Mathf.Round ((Vector3.Dot (Car.velocity, (Vec4before - Vecbehind).normalized))*3.6f * 100) / 100;
+		float inTraverDir = Mathf.Round ((Vector3.Dot (Car.velocity, traverseDir))*3.6f * 100) / 100;
+
+		float[] Vec = new float[3] {inStreetDir, inTraverDir, CurvinessBeforeCar};
+		return Vec;
 	}
 
 
@@ -296,7 +314,11 @@ public class CarController : MonoBehaviour {
 		// reset the car & kill innertia
 		Car.transform.position = Position;
 		Car.transform.rotation = Rotation;
+		lastPosition = transform.position;
+		lastPerpendicularPosition = Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position);
 		Car.velocity = Vector3.zero;
+		velocity = 0;
+		velocityOfPerpendiculars = 0;
 	    Car.angularVelocity = Vector3.zero;
 		Car.angularDrag = 0.0f;
 		Car.drag = 0.0f;

@@ -41,7 +41,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 	public const bool trainAIMode_RestartAfterWallhit = true;
 
-	public const int maxSpeed = 80; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
+	public const int maxSpeed = 130; //80; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
 }
 
 //================================================================================
@@ -400,7 +400,7 @@ public class AiInterface : MonoBehaviour {
 		//		R: Progress as a vector (rounded to 4) 
 		//  CTime: CreationTime of Vector (Not send-time) (this one is in Unity-Time only! The STime will be in real time)
 
-		StringBuilder all = new StringBuilder(1900);
+		StringBuilder all = new StringBuilder(1902);
 
 		all.Append ("CTime("+UnityTime().ToString()+")");
 
@@ -441,8 +441,8 @@ public class AiInterface : MonoBehaviour {
 
 	public float[] GetSpeedSteer() {
 		float velo = Car.velocity;
-		float velo2 = Car.velocity_perpendicular;
-		float velo3 = Car.GetSpeedInStreetDir ();
+		float velo2 = Car.velocityOfPerpendiculars;
+		float[] velo345 = Car.GetSpeedInDir();
 		int MAXSPEED = 250;
 		int fake_speed = -1;
 		if (HumanTakingControl) { //um geschwindigkeiten zu faken damit man sich die entsprechenden q-werte anschauen kann
@@ -470,10 +470,13 @@ public class AiInterface : MonoBehaviour {
 		if (fake_speed > -1) {
 			velo = fake_speed/9.0f * MAXSPEED;
 			velo2 = fake_speed/9.0f * MAXSPEED;
-			velo3 = fake_speed/9.0f * MAXSPEED;
+			velo345[0] = fake_speed/9.0f * MAXSPEED;
 			Game.UserInterface.Speedometer.text = velo.ToString() + " kph";
 		}
-		float[] SpeedSteerVec = new float[9] { colliderRL.motorTorque, colliderRR.motorTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection), velo2, Tracking.getCarAngle(), velo3};
+		float RLTorque = Car.maxMotorTorque * Car.throttlePedalValue * Car.gear;
+		float RRTorque = Car.maxMotorTorque * Car.throttlePedalValue * Car.gear;
+
+		float[] SpeedSteerVec = new float[11] { RLTorque, RRTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection), velo2, Tracking.getCarAngle(), velo345[0], velo345[1], velo345[2]};
 		return SpeedSteerVec;
 	}
 

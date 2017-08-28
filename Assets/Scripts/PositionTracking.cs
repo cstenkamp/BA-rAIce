@@ -82,11 +82,16 @@ public class PositionTracking : MonoBehaviour {
 
 	}
 
+	int mod(int x, int m) {
+		return (x%m + m)%m;
+	}
+
+
 	public float getCarAngle()
 	{
 		Quaternion Angle;
 		try {
-			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[getClosestAnchorBehind(Car.transform.position)], Vector3.up); 
+			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[mod(getClosestAnchorBehind(Car.transform.position)+1, anchorVector.Length-1)], Vector3.up); 
 		} catch (IndexOutOfRangeException) {
 			Angle = Quaternion.AngleAxis(180+absoluteAnchorAngles[0], Vector3.up); 
 		}
