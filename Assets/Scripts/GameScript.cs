@@ -17,7 +17,6 @@ public class GameScript : MonoBehaviour {
 	{
 		mode = "menu";
 		CarCamera.SetActive(false);
-        MiniMapCamera.SetActive(false);
         OverviewCamera.SetActive(true);
 		if (Rec.LoadLap("fastlap"))
 		{
@@ -38,7 +37,6 @@ public class GameScript : MonoBehaviour {
 		{
 			mode = newMode;
 			CarCamera.SetActive(false);
-            MiniMapCamera.SetActive(false);
             OverviewCamera.SetActive(true);
 			Car.ResetCar();
 			Timing.ResetTiming();
@@ -49,7 +47,6 @@ public class GameScript : MonoBehaviour {
 			mode = newMode;
 			OverviewCamera.SetActive(false);
 			CarCamera.SetActive(true);
-            MiniMapCamera.SetActive(true);
             Car.ResetCar();
 			Timing.ResetTiming();
 			Rec.ResetLap();

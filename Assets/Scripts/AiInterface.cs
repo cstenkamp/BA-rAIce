@@ -32,17 +32,7 @@ public class AiInterface : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Reset();
-        stopwatch.Start();
-        float[] vec = GetCarStatusVector();
-        string tosend = "";
-        foreach (float elem in vec)
-            tosend = tosend + " " + elem;
-        // UnityEngine.Debug.Log(tosend);
-        SynchronousSocketClient.StartClient(tosend);
-        stopwatch.Stop();
-        UnityEngine.Debug.Log("Ticks: " + stopwatch.ElapsedTicks + " mS: " + stopwatch.ElapsedMilliseconds);
+
     }
 
     void FixedUpdate()
@@ -214,97 +204,4 @@ public class AiInterface : MonoBehaviour {
 	}
 
 }
-
-
-
-
-
-
-
-
-public class SynchronousSocketClient
-{
-
-    public static void StartClient(string data)
-    {
-        // Data buffer for incoming data.  
-        byte[] bytes = new byte[1024];
-
-        try
-        {
-            // Resolves a host name to an IPHostEntry instance           
-            IPHostEntry ipHost = Dns.GetHostEntry("");
-
-            // Gets first IP address associated with a localhost
-            IPAddress ipAddr = ipHost.AddressList[0];
-
-            // Creates a network endpoint
-            IPEndPoint ipEndPoint = new IPEndPoint(ipAddr, 5005);
-
-            // Create one Socket object to setup Tcp connection
-            Socket sender = new Socket(
-                ipAddr.AddressFamily,// Specifies the addressing scheme
-                SocketType.Stream,   // The type of socket 
-                ProtocolType.Tcp     // Specifies the protocols 
-                );
-
-            sender.NoDelay = false;   // Using the Nagle algorithm
-
-            // Establishes a connection to a remote host
-            sender.Connect(ipEndPoint);
-            UnityEngine.Debug.Log("Socket connected to {0}" + sender.RemoteEndPoint.ToString());
-
-            // Sending message
-            //<Client Quit> is the sign for end of data
-            string theMessage = data;
-            int len = theMessage.Length;
-
-            string ms = len.ToString();
-            while (ms.Length < 5)
-            {
-                ms = "0" + ms;
-            }
-            theMessage = ms + theMessage;
-
-            // byte[] msg = Encoding.Unicode.GetBytes(theMessage + "<Client Quit>");
-            byte[] msg = Encoding.ASCII.GetBytes(theMessage);
-            UnityEngine.Debug.Log(msg);
-
-            // Sends data to a connected Socket.
-            int bytesSend = sender.Send(msg);
-
-            // Receives data from a bound Socket.
-            int bytesRec = sender.Receive(bytes);
-
-            // Converts byte array to string
-            theMessage = Encoding.ASCII.GetString(bytes, 0, bytesRec);
-
-            // Continues to read the data till data isn't available
-            while (sender.Available > 0)
-            {
-                bytesRec = sender.Receive(bytes);
-                theMessage += Encoding.Unicode.GetString(bytes, 0, bytesRec);
-            }
-            UnityEngine.Debug.Log("The server reply: {0}" + theMessage);
-
-            // Disables sends and receives on a Socket.
-            sender.Shutdown(SocketShutdown.Both);
-
-            //Closes the Socket connection and releases all resources
-            sender.Close();
-        }
-        catch (Exception ex)
-        {
-            UnityEngine.Debug.Log("Exception: {0}" + ex.ToString());
-        }
-
-
-    }
-
-    public static int Main(String[] args)
-    {
-        StartClient("hello World!");
-        return 0;
-    }
-
-}
+	
