@@ -130,7 +130,7 @@ public class UIScript : MonoBehaviour {
 
 
 	void OnGUI () {
-		if (AiInterface.UTCTime() > 1702716804) {
+		if (!((Consts.DEBUG_DISABLEGUI_AIMODE && Game.AiInt.AIMode) || Consts.DEBUG_DISABLEGUI_HUMANMODE && !Game.AiInt.AIMode)) { 
 			if (Time.timeScale > 0) {
 				GUI.Label (new Rect (0, 0, 100, 600), "FPS: " + ((int)(1.0f / Time.smoothDeltaTime)).ToString ());  
 			} 
@@ -159,18 +159,18 @@ public class UIScript : MonoBehaviour {
 
 	public void DrivingOverlayHandling()
 	{
-		if (AiInterface.UTCTime() > 1702716804) {
-			if (Game.mode.Contains("menu") && drivingOverlayActive == true) {  //TODO: wenn es ein anderes Pausenmenü gibt: das hier splitten.
-				UiBgTop.SetActive(false); UiBgBottom.SetActive(false); UiFeedbackBg.SetActive(false); UiSteering.SetActive(false); 
-				UiThrottle.SetActive(false); UiBrake.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; DriveModeDisplay.enabled = false;
-				FSlipFL.enabled=false; FSlipFR.enabled=false; FSlipRL.enabled=false; FSlipRR.enabled=false; SSlipFL.enabled=false; SSlipFR.enabled=false; 
-				SSlipRL.enabled=false; SSlipRR.enabled=false; FSlipHeadline.enabled=false; SSlipHeadline.enabled=false; GearDisplay.enabled=false; 
-				CurrentLaptime.enabled=false; Delta.enabled=false; LastLaptime.enabled=false; FastestLaptime.enabled=false; Progress.enabled=false; 
-				LapCount.enabled=false; drivingOverlayActive=false; 
-				UiLookAheadBg.SetActive(false); UiProgressVectorBg.SetActive(false); UiCenterDistanceVectorBg.SetActive(false); UiPosYBg.SetActive (false);
+		if (Game.mode.Contains("menu") && drivingOverlayActive == true) {  
+			UiBgTop.SetActive(false); UiBgBottom.SetActive(false); UiFeedbackBg.SetActive(false); UiSteering.SetActive(false); 
+			UiThrottle.SetActive(false); UiBrake.SetActive(false); carPosY.enabled=false; Speedometer.enabled=false; DriveModeDisplay.enabled = false;
+			FSlipFL.enabled=false; FSlipFR.enabled=false; FSlipRL.enabled=false; FSlipRR.enabled=false; SSlipFL.enabled=false; SSlipFR.enabled=false; 
+			SSlipRL.enabled=false; SSlipRR.enabled=false; FSlipHeadline.enabled=false; SSlipHeadline.enabled=false; GearDisplay.enabled=false; 
+			CurrentLaptime.enabled=false; Delta.enabled=false; LastLaptime.enabled=false; FastestLaptime.enabled=false; Progress.enabled=false; 
+			LapCount.enabled=false; drivingOverlayActive=false; 
+			UiLookAheadBg.SetActive(false); UiProgressVectorBg.SetActive(false); UiCenterDistanceVectorBg.SetActive(false); UiPosYBg.SetActive (false);
 
-			}
+		}
 
+		if (!((Consts.DEBUG_DISABLEGUI_AIMODE && Game.AiInt.AIMode) || Consts.DEBUG_DISABLEGUI_HUMANMODE && !Game.AiInt.AIMode)) {
 			if ((Game.mode.Contains("train_AI") || Game.mode.Contains("drive_AI")) && drivingOverlayActive == false) { 
 				UiLookAheadBg.SetActive(true); UiProgressVectorBg.SetActive(true); UiCenterDistanceVectorBg.SetActive(true); UiPosYBg.SetActive (true); carPosY.enabled=true; 
 			}
@@ -202,16 +202,14 @@ public class UIScript : MonoBehaviour {
 					Vector2 FR = Car.GetSlip(Car.colliderFR);
 					Vector2 RL = Car.GetSlip(Car.colliderRL);		
 					Vector2 RR = Car.GetSlip(Car.colliderRR);
-					if (AiInterface.UTCTime() > 1502716804) {
-						FSlipFL.text = FL [0].ToString ("F2");
-						FSlipFR.text = FR [0].ToString ("F2");
-						FSlipRL.text = RL [0].ToString ("F2");
-						FSlipRR.text = RR [0].ToString ("F2");
-						SSlipFL.text = FL [1].ToString ("F2");
-						SSlipFR.text = FR [1].ToString ("F2");
-						SSlipRL.text = RL [1].ToString ("F2");
-						SSlipRR.text = RR [1].ToString ("F2");
-					}
+					FSlipFL.text = FL [0].ToString ("F2");
+					FSlipFR.text = FR [0].ToString ("F2");
+					FSlipRL.text = RL [0].ToString ("F2");
+					FSlipRR.text = RR [0].ToString ("F2");
+					SSlipFL.text = FL [1].ToString ("F2");
+					SSlipFR.text = FR [1].ToString ("F2");
+					SSlipRL.text = RL [1].ToString ("F2");
+					SSlipRR.text = RR [1].ToString ("F2");
 
 				}
 

@@ -1,8 +1,4 @@
-﻿/// <summary>
-/// MAIN TODO HERE:
-/// 1) Gucken was ich mache wenn MAXAGEPYTHONRESULT überschritten ist
-/// </summary>
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System;
 using System.Threading;
@@ -13,6 +9,9 @@ using System.Text;
 using System.IO;
 
 public static class Consts { //TODO: diese hier an python schicken!
+	public const bool DEBUG_DISABLEGUI_AIMODE = true;    //a bug in Unity causes it to crash if GUI elements are updated to often... 
+	public const bool DEBUG_DISABLEGUI_HUMANMODE = false; //according to my ticket https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k, this is all fixed very soon
+
 	public const int PORTSEND = 6435;
 	public const int PORTASK = 6436;
 	public const int updatepythonintervalms = 100;  //multiples of 25
@@ -97,6 +96,8 @@ public class AiInterface : MonoBehaviour {
 
 
 	void Start () {
+		if (Application.unityVersion != "2017.1.0f3") 
+			UnityEngine.Debug.Log ("As you're using another version of Unity than the one tested with, you can maybe turn on the GUI elements savely! (variable DEBUG_DISABLEGUI in AIInterface)");
 		StartedAIMode ();
 	}
 
@@ -721,7 +722,7 @@ public class AiInterface : MonoBehaviour {
 	}
 
 	public static long UTCTime() {
-		//https://www.epochconverter.com/ according to my ticket https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k, this is all fixed in the update in 2 weeks
+		//https://www.epochconverter.com/ 
 		return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
 	}
 
