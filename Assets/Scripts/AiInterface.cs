@@ -9,7 +9,7 @@ using System.Text;
 using System.IO;
 
 public static class Consts { //TODO: diese hier an python schicken!
-	public const bool DEBUG_DISABLEGUI_AIMODE = true;    //a bug in Unity causes it to crash if GUI elements are updated to often... 
+	public const bool DEBUG_DISABLEGUI_AIMODE = false;    //a bug in Unity causes it to crash if GUI elements are updated to often... 
 	public const bool DEBUG_DISABLEGUI_HUMANMODE = false; //according to my ticket https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k, this is all fixed very soon
 
 	public const int PORTSEND = 6435;
@@ -40,7 +40,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 	public const bool trainAIMode_RestartAfterWallhit = true;
 
-	public const int maxSpeed = 80; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
+	public const int maxSpeed = 9999; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
 }
 
 //================================================================================
