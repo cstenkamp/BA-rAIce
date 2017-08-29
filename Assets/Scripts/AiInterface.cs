@@ -40,7 +40,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 	public const bool trainAIMode_RestartAfterWallhit = true;
 
-	public const int maxSpeed = 130; //80; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
+	public const int maxSpeed = 80; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
 }
 
 //================================================================================
