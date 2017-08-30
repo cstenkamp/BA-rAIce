@@ -420,7 +420,13 @@ public class AiInterface : MonoBehaviour {
 
 		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
 
-		all.Append ("A(" + Math.Round (Car.throttlePedalValue, 3)+","+Math.Round (Car.brakePedalValue, 3)+","+Math.Round (Car.steeringValue, 3)+")");
+		float maybefakethrottle;
+		if (Input.GetKey (KeyCode.P))
+			maybefakethrottle = 1;
+		else
+			maybefakethrottle = Car.throttlePedalValue;
+
+		all.Append ("A(" + Math.Round (maybefakethrottle, 3)+","+Math.Round (Car.brakePedalValue, 3)+","+Math.Round (Car.steeringValue, 3)+")");
 
 		if (Consts.usecameras) {
 			all.Append ("V1(" +  Minmap.GetVisionDisplay () + ")");
