@@ -472,12 +472,12 @@ public class PositionTracking : MonoBehaviour {
 		return centerDist;
 	}
 
-	public Vector3 GetPerpendicular(Vector3 carPosition)
+	public Vector3 GetPerpendicular(Vector3 carPosition, int ankerXBefore=0)
 	{
 		// get closest anchor
-		int closestAnchor = GetClosestAnchor(carPosition);
+		int closestAnchor = mod(GetClosestAnchor(carPosition) - ankerXBefore, anchorVector.Length);
 		int caPlus1 = closestAnchor+1;
-		int caMinus1 = closestAnchor-1;
+		int caMinus1 = closestAnchor-(1+ankerXBefore);
 		if (caPlus1 >= anchorVector.Length) { caPlus1 -= anchorVector.Length; }
 		if (caMinus1 < 0) { caMinus1 += anchorVector.Length; }
 

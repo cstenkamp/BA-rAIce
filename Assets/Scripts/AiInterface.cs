@@ -88,6 +88,7 @@ public class AiInterface : MonoBehaviour {
 	public bool HumanTakingControl = false;
 	public bool just_hit_wall = false;
 	public bool AIMode = false;
+	public bool forbidSpeed = false;
 
 	public AsynchronousClient SenderClient;
 	public AsynchronousClient ReceiverClient; 
@@ -394,7 +395,8 @@ public class AiInterface : MonoBehaviour {
 		//      S: SpeedSteerVec (rounded to 4)
 		//		T: CarStatusVec  (rounded to 4)
 		//		C: CenterDistVec (rounded to 4)
-		//		L: LookAheadVec  (rounded to 4) (und VORHER die straight-dist!!)
+		//		W: Wall-Distance (7 values, from different positions with different directions)
+		//		L: LookAheadVec  (rounded to 4)
 		//		D: Delta & Feedback
 		//		A: Action in Unity (may be different than what python asked for because of humantakingcontrol)
 		//	   V1: VisionVector1 (converted to decimal)
@@ -417,7 +419,9 @@ public class AiInterface : MonoBehaviour {
 			tmp = 11; //10 ist die distanz der mauer, aber da er ja direkt resettet weiß er es anderenfalls nicht mehr
 		all.Append ("C("+Math.Round(tmp,3).ToString()+","+string.Join (",", GetCenterDistVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ())+")");
 
-		all.Append ("L("+ string.Join (",", GetStraightWallDist ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ()) + ","+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
+		all.Append ("W(" + string.Join (",", GetStraightWallDist ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ()) + ")");
+
+		all.Append ("L("+ string.Join (",", GetLookAheadVector ().Select (x => (Math.Round (x, 4)).ToString ()).ToArray ())+")");
 
 		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
 
@@ -445,6 +449,81 @@ public class AiInterface : MonoBehaviour {
 		return all.ToString ();
 	}
 
+
+	public float[] GetStraightWallDist() {
+		Vector3 pos = Car.Car.position;
+		float[] result = new float[7] {300, 300, 300, 300, 300, 300, 300};
+
+		Quaternion rot = Car.Car.transform.rotation;
+		rot.x = 0;
+		rot.z = 0;
+
+		RaycastHit hit;
+
+		Ray ray = new Ray(pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			result[0] = Vector3.Distance (ray.origin, hit.point);//direction the car FACES
+		}
+
+		rot.w = rot.w - 0.1f * Car.steeringValue;
+
+		ray = new Ray(pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			result[1] = Vector3.Distance (ray.origin, hit.point); //direction the car STEERS
+		}
+
+		rot = Quaternion.LookRotation (Car.transform.position - Car.lastb1Position);
+		rot.x = 0;
+		rot.z = 0;
+
+		ray = new Ray (pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			result[2] = Vector3.Distance (ray.origin, hit.point); //direction the car MOVES
+		}
+
+
+		//SHORTSIGHTED...
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 2));
+
+		ray = new Ray (pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			result[3] = Vector3.Distance (ray.origin, hit.point); //shortsighted from car, direction the STREET GOES
+		}
+
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 2));
+
+		ray = new Ray (pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.red, 1.0f);
+			result[4] = Vector3.Distance (ray.origin, hit.point); //shortsighted from STREETMIDDLE, direction the STREET GOES
+		}
+
+		//LONGSIGHTED...
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -4) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
+
+		ray = new Ray (pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			result[5] = Vector3.Distance (ray.origin, hit.point); //longsighted from car, direction the STREET GOES
+		}
+
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -4) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
+
+		ray = new Ray (pos, rot*Vector3.forward);
+		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
+			//UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.grey, 1.0f);
+			result[6] = Vector3.Distance (ray.origin, hit.point); //longsighted from STREETMIDDLE, direction the STREET GOES
+		}
+
+		//UnityEngine.Debug.Log (result [1] - Car.velocity + 100);
+		//supergute speed-heuristik: je näher dieser wert an 0 ist, desto besser. wobei über 0 flach steigt, unter 0 steil: result [1] - Car.velocity + 100
+
+		return result;
+	}
 
 
 	public float[] GetSpeedSteer() {
@@ -562,33 +641,6 @@ public class AiInterface : MonoBehaviour {
 		}
 
 		return progressVector;
-	}
-
-
-	public float[] GetStraightWallDist() {
-		Vector3 pos = Car.Car.position;
-		float[] result = new float[2] {300, 300};
-
-		Quaternion rot = Car.Car.transform.rotation;
-		rot.x = 0;
-		rot.z = 0;
-
-		RaycastHit hit;
-
-		Ray ray = new Ray(pos, rot*Vector3.forward);
-		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
-			result[0] = Vector3.Distance (ray.origin, hit.point);
-		}
-
-		rot.w = rot.w - 0.1f * Car.steeringValue;
-
-		ray = new Ray(pos, rot*Vector3.forward);
-		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
-			result[1] = Vector3.Distance (ray.origin, hit.point);
-		}
-		return result;
 	}
 
 

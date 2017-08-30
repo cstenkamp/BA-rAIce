@@ -45,8 +45,9 @@ public class CarController : MonoBehaviour {
 
 	public Vector3 startPosition = new Vector3(48.0f,1.1f,150.0f);
 	public Quaternion startRotation = new Quaternion(0.0f,180.0f,0.0f,0.0f);
-	Vector3 lastPosition;
-	Vector3 lastPerpendicularPosition;
+	public Vector3 lastPosition;
+	public Vector3 lastb1Position;
+	public Vector3 lastPerpendicularPosition;
 	float lastTime;
 	float deltaPosition;
 	float deltaPositionPerpendicular;
@@ -119,6 +120,7 @@ public class CarController : MonoBehaviour {
 			velocity = Car.velocity.magnitude*3.6f;
 			velocityOfPerpendiculars = deltaPositionPerpendicular / deltaTime * 3.6f;
 			velocityOfPerpendiculars = (velocityOfPerpendiculars > velocity ? GetSpeedInDir()[0] : velocityOfPerpendiculars); //for safety, I'm pretty sure theres no reason anymore they are faster, but this is safer.
+			lastb1Position = lastPosition != transform.position ? lastPosition : lastb1Position; //last-but-one updates only if the car moved (used in wallidstance)
 			lastPosition = transform.position;
 			lastPerpendicularPosition = Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position);
 			lastTime = Time.time;
@@ -154,6 +156,11 @@ public class CarController : MonoBehaviour {
 				if (velocity > Consts.maxSpeed) {
 					SpeedMultiplier = 0;
 				}
+			}
+
+			if (AiInt.forbidSpeed) {
+				UnityEngine.Debug.Log ("FORBID");
+				SpeedMultiplier = 0;
 			}
 
 			colliderRL.motorTorque = maxMotorTorque * throttlePedalValue * gear * SpeedMultiplier; 	 	
