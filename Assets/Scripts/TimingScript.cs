@@ -91,7 +91,6 @@ public class TimingScript : MonoBehaviour {
 			time_punishs += howmuch;
 	}
 
-	//TODO: Ich glaube es wird bspw beim menu offnen timing.reset aufgerufen obwohl es timing.stop sein sollte
 
 	// Reset Timing Script
 	public void ResetTiming()

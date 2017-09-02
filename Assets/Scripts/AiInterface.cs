@@ -55,7 +55,7 @@ public class AiInterface : MonoBehaviour {
 	public PositionTracking Tracking;
 	public CarController Car;
 	public MinimapScript Minmap;
-	public MiniMap2Script Minmap2;
+	public MinimapScript Minmap2;
 	public GameScript Game;
 	public Recorder Rec;
 
@@ -137,10 +137,10 @@ public class AiInterface : MonoBehaviour {
 		long currtime = MSTime ();
 		if (AIMode) {
 			if (ReceiverClient.response.othercommand && ReceiverClient.response.command == "pleaseUnFreeze") //this must be in Update, because if the game is frozen, FixedUpdate won't run.
-				Car.UnQuickPause ("Python");
+				Game.UnQuickPause ("Python");
 
 			if (currtime - lastsaviortime > 2000) { //manchmal unfreezed er nicht >.< also alle 10 sekunden einfach mal machen, hässlicher workaround I know
-				Car.UnQuickPause ("ConnectionDelay");
+				Game.UnQuickPause ("ConnectionDelay");
 				lastsaviortime = currtime;
 			}
 
@@ -151,12 +151,34 @@ public class AiInterface : MonoBehaviour {
 					Car.ResetCar (false); //false weil, wenn python dir gesagt hast dass du dich resetten sollst, du nicht python das noch sagen sollst
 				}
 				if (ReceiverClient.response.command == "pleaseFreeze") { 
-					Car.QuickPause ("Python");
+					Game.QuickPause ("Python");
 				}
 				if (ReceiverClient.response.command == "pleaseUnFreeze") { 
-					Car.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
+					Game.UnQuickPause ("Python"); //is useless here, because FixedUpdate is not run during Freeze
 				} 
 				ReceiverClient.response.othercommand = false;
+			}
+		}
+
+		// reconnect to server
+		if (Input.GetKeyDown(KeyCode.C)) {   
+			if (AIMode) {
+				Reconnect(); 
+			}
+		}
+
+		// disconnect from server
+		if (Input.GetKeyDown (KeyCode.D)) { 
+			if (AIMode) {
+				Disconnect(); 
+			}
+		}		
+
+		//human taking control over AI
+		if (Input.GetKeyDown (KeyCode.H)) { 
+			if (AIMode && (!Game.mode.Contains ("keyboarddriving"))) {
+				FlipHumanTakingControl();
+				Game.UserInterface.UpdateGameModeDisp ();
 			}
 		}
 	}
@@ -462,7 +484,7 @@ public class AiInterface : MonoBehaviour {
 
 		Ray ray = new Ray(pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.black, 0.05f);
 			result[0] = Vector3.Distance (ray.origin, hit.point);//direction the car FACES
 		}
 
@@ -470,7 +492,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray(pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.magenta, 0.05f);
 			result[1] = Vector3.Distance (ray.origin, hit.point); //direction the car STEERS
 		}
 
@@ -480,7 +502,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 0.05f);
 			result[2] = Vector3.Distance (ray.origin, hit.point); //direction the car MOVES
 		}
 
@@ -490,7 +512,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.white, 0.05f);
 			result[3] = Vector3.Distance (ray.origin, hit.point); //shortsighted from car, direction the STREET GOES
 		}
 
@@ -498,7 +520,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.yellow, 0.05f);
 			result[4] = Vector3.Distance (ray.origin, hit.point); //shortsighted from STREETMIDDLE, direction the STREET GOES
 		}
 
@@ -507,7 +529,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.red, 1.0f);
+			UnityEngine.Debug.DrawLine (Car.Car.transform.position, hit.point, Color.blue, 0.05f);
 			result[5] = Vector3.Distance (ray.origin, hit.point); //longsighted from car, direction the STREET GOES
 		}
 
@@ -515,7 +537,7 @@ public class AiInterface : MonoBehaviour {
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
-			//UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.grey, 1.0f);
+			UnityEngine.Debug.DrawLine (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position), hit.point, Color.grey, 0.05f);
 			result[6] = Vector3.Distance (ray.origin, hit.point); //longsighted from STREETMIDDLE, direction the STREET GOES
 		}
 
@@ -529,7 +551,7 @@ public class AiInterface : MonoBehaviour {
 	public float[] GetSpeedSteer() {
 		float velo = Car.velocity;
 		float velo2 = Car.velocityOfPerpendiculars;
-		float[] velo345 = Car.GetSpeedInDir();
+		float[] velo345 = Tracking.GetSpeedInDir();
 		int MAXSPEED = 250;
 		int fake_speed = -1;
 		if (HumanTakingControl) { //um geschwindigkeiten zu faken damit man sich die entsprechenden q-werte anschauen kann

@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Linq;
+using System.Collections.Generic;
 
 //wenn man das spiel komplett neu starten können wollte, muss man dafür ResetSessionTiming vom Timinscript callen
 
@@ -16,6 +17,11 @@ public class GameScript : MonoBehaviour {
 	public Recorder Rec;
 	public UIScript UserInterface;
 	public AiInterface AiInt;
+
+	public List<string> FreezeReasons;
+	public string shouldQuickpauseReason = "";
+	public string shouldUnQuickpauseReason = ""; //they would be bools, but as I also need to specify the reason, they're strings ("" or content)
+	public bool ShowQuickPauseGUI = false;
 
 
 	// Use this for initialization
@@ -47,7 +53,62 @@ public class GameScript : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
 	{
+		if (shouldQuickpauseReason != "") { //since some QuickPause-functions are not threadsafe, I can only set a variable from them such that the main-thread does that instead.
+			QuickPause (shouldQuickpauseReason);
+			shouldQuickpauseReason = "";
+		}
+		if (shouldUnQuickpauseReason != "") {
+			UnQuickPause (shouldUnQuickpauseReason);
+			shouldUnQuickpauseReason = "";
+		}
+
+		if (Input.GetKeyDown(KeyCode.Q)) {   
+			if (mode.Contains ("driving")) {
+				QuickPause ("Manual");
+			} else {
+				UnQuickPause ("Manual"); 
+			}
+		}	
+
+		// pause & exit to menu
+		if (Input.GetKeyDown(KeyCode.Escape)) { SwitchMode("menu"); }
 	}
+
+	//the Quick-pause function, triggered by Q or the python-client
+	public void QuickPause(string reason) {
+		if (mode.Contains ("driving")) {
+			FreezeReasons.Add (reason);
+			UnityEngine.Debug.Log ("Freezing because " + reason);
+			mode = mode.Where (val => val != "driving").ToArray ();
+			UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
+			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
+			CarCamera.SetActive (false); 
+			ShowQuickPauseGUI = true;
+		}
+	}
+
+	public void UnQuickPause(string reason) {
+		if ( (!mode.Contains ("driving")) && (!mode.Contains ("menu"))) {
+			if (reason == "All")
+				FreezeReasons.Clear();
+			else
+				FreezeReasons.Remove (reason);
+			if (!FreezeReasons.Any()) {
+				if (AiInt.AIMode || mode.Contains("train_AI")) {
+					AiInt.load_infos(true, false);
+					AiInt.lastgetvectortime = AiInterface.MSTime ();
+				}
+				mode = (mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
+				UserInterface.UpdateGameModeDisp ();
+				CarCamera.SetActive (true);
+				Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
+				if (AiInt.AIMode)
+					AiInt.load_infos (false, true);
+			}
+		}
+	}
+
+
 
 	void ChangeDeltaTime() {
 		float tmpval = Time.timeScale;
@@ -67,14 +128,13 @@ public class GameScript : MonoBehaviour {
 		//TODO! wenn man escape drückt soll der ein ANDERES menü öffnen "gehe zu letztem checkpoint, resette auto, zurück" (da drin wäre dann auch nicht timing.reset sondern timing.stop)
 		//TODO: dann beim resetten auf die resets in carcontroller, recorder, timingscript, ... achten!
 
-		Car.UnQuickPause ("All");
+		UnQuickPause ("All");
 		if (AiInt.AIMode) {
 			AiInt.SenderClient.ResetServerConnectTrials ();
 			AiInterface.KillOtherThreads ();
 			AiInt.SenderClient.serverdown = true;
 		}
 
-		//TODO: das "train_AI" hier muss früher oder später weg.
 		if (newMode == "driving") {
 			mode = new string[2]{ "driving", "keyboarddriving" };  
 		} else
@@ -127,7 +187,7 @@ public class GameScript : MonoBehaviour {
 			modetxt += curr + " ";
 		}	
 		if (AiInt.HumanTakingControl) {
-			modetxt += "(Human Intervention)";
+			modetxt += "(Human interference)";
 		}
 		return modetxt;
 	}

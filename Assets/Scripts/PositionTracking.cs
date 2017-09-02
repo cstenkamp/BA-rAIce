@@ -52,18 +52,12 @@ public class PositionTracking : MonoBehaviour {
 			ShowAnchors(anchorVector, anchorPrototype, countText, "absoluteAngles"); // for debugging
 	}
 	
-	// Update is called once per frame
-	void Update()
-	{
-	}
 
 	void FixedUpdate ()
 	{
 		lastFrameProgress = progress;
 		progress = GetProgress(anchorVector, segmentLengths, timedCar.transform.position);
 		TriggerRec(progress, 0.5f);
-
-
 
 
 		if ((lastFrameProgress <= progress) || (getCarAngle() < 100)) {
@@ -79,12 +73,15 @@ public class PositionTracking : MonoBehaviour {
 
 		if (Consts.debug_showperpendicular)
 			ShowPerpendicular(); // for debugging
-
 	}
 
 	int mod(int x, int m) {
 		return (x%m + m)%m;
 	}
+
+	// #####################################################################
+	// ################ FUNCTIONS TO CALL WHEN NEEDED ######################
+	// #####################################################################
 
 
 	public float getCarAngle()
@@ -105,8 +102,233 @@ public class PositionTracking : MonoBehaviour {
 	}
 
 
+	public float[] GetSpeedInDir() 
+	{
+		Vector3 Vecbehind = anchorVector[mod(getClosestAnchorBehind(Car.Car.position)-1, anchorVector.Length-1)];
+		Vector3 Vec1before = anchorVector[mod(getClosestAnchorBehind(Car.Car.position)+1, anchorVector.Length-1)]; 
+		Vector3 Vec4before = anchorVector[mod(getClosestAnchorBehind(Car.Car.position)+4, anchorVector.Length-1)]; 
+		Vector3 Vec8before = anchorVector[mod(getClosestAnchorBehind(Car.Car.position)+8, anchorVector.Length-1)]; 
+
+		Vector3 shortStreetDir = (Vec1before - Vecbehind).normalized; shortStreetDir /= shortStreetDir.magnitude;
+		Vector3 longStreetDir = (Vec8before - Vec1before).normalized; longStreetDir /= longStreetDir.magnitude;
+
+		Vector3 traverseDir = Vector3.Cross(shortStreetDir, Vector3.up); traverseDir /= traverseDir.magnitude;
+
+		float sign = (Vector3.Dot (traverseDir, longStreetDir) > 0) ? -1.0f : 1.0f;
+		float CurvinessBeforeCar = Mathf.Round ((Vector3.Dot (shortStreetDir, longStreetDir))* 100) / 100;
+		CurvinessBeforeCar = (1.0f-CurvinessBeforeCar)*sign;
+
+		float inStreetDir = Mathf.Round ((Vector3.Dot (Car.Car.velocity, (Vec4before - Vecbehind).normalized))*3.6f * 100) / 100;
+		float inTraverDir = Mathf.Round ((Vector3.Dot (Car.Car.velocity, traverseDir))*3.6f * 100) / 100;
+
+		float[] Vec = new float[3] {inStreetDir, inTraverDir, CurvinessBeforeCar};
+		return Vec;
+	}
+
+
+	public float GetCenterDist()
+	{
+		// get coordinates
+		Vector3 carPosition = timedCar.transform.position;
+		Vector3 perpendicularPoint = GetPerpendicular(carPosition);
+
+		// get sign for centerDist
+		int anchor = ClosestSmallerThan(anchorProgress, progress);
+		if (anchor >= anchorVector.Length) { anchor -= anchorVector.Length; }
+		int anchorPlus1 = anchor+1;
+		if (anchorPlus1 >= anchorVector.Length) { anchorPlus1 -= anchorVector.Length; }
+		Vector3 AB = new Vector3();
+		try {
+			AB = anchorVector[anchorPlus1]-anchorVector[anchor];
+		}
+		catch {
+			UnityEngine.Debug.Log ("ERROR ERROR 123");
+			UnityEngine.Debug.Log (anchor);
+			UnityEngine.Debug.Log (anchorProgress.Length);
+			UnityEngine.Debug.Log (anchorVector [anchor]);
+			UnityEngine.Debug.Log (anchorPlus1);
+			UnityEngine.Debug.Log (anchorVector [anchorPlus1]);
+		}
+		Vector3 PC = carPosition-perpendicularPoint;
+		Vector3 cross = Vector3.Cross(AB,PC);
+
+		// output
+		float centerDist = PC.magnitude;
+		if (cross.y<0.0f) { centerDist = -centerDist; }
+		return centerDist;
+	}
+
+
+	//gets the progress of the car. How? by getting the euclidianly nearest anchor, and also the relative position from the car to this vector (if its +0.4 in front of it for example)
+	//for that, after finding the nearest anchor it takes this one (B), the one before (A) and the one after (C) it, and finds a point (D) on AB as well as BC, which has a vector to the coordinates of the car (P)
+	//which is perpendicular to AB bzw. BC. (the length of this line is btw the distance from car to center). Then it looks which of those two lines is shorter, and it thus knows if its rather before point B 
+	//or after it. Then it interpolates between, say, A and B and sees where D lies percentually in closeness to B. that percentage with either negativ or positive sign is then the more precise position.
+	//this absolute value ("the car is at anchor 15,45") is then converted into a percentage, by taking the lengths of the first 15 + 0.45 the distance between 15 and 16, divided by the gesamtlength.
+	//the "length of this line" is precondition for two of the shown vektor on the screen!
+	float GetProgress(Vector3[] anchorVector, float[] segmentLengths, Vector3 carPosition) 
+	{
+		// get car closest anchor
+		int closestAnchor = GetClosestAnchor(carPosition);
+
+		// calculate progress on a scale from 0 to anchorVector.Length, i.e. track progress in "number of anchors" 
+		float progressInAnchors = closestAnchor*1.0f;
+		progressInAnchors += ProgressFromClosestAnchor(carPosition, anchorVector, closestAnchor);
+		if (progressInAnchors < 0.0f) { progressInAnchors += segmentLengths.Length; }
+
+		// convert track progress from anchor-based to meters to percent
+		float progress = ProgressConvert(progressInAnchors,segmentLengths); // progress from 0 to 1
+		if (!Car.Timing.activeLap)
+			progress = progress - 1.0f;
+		if (Car.Timing.activeLap && !Car.Timing.ccPassed && progress > 0.5f)
+			progress -= 1.0f;
+		if (progress < -0.99f)
+			progress += 1.0f;
+		return progress;
+	}
+
+
 	// #####################################################################
-	// ########################## FUNCTIONS START ##########################
+	// ################## HELPER FUNCTIONS FOR THE ABOVE ###################
+	// #####################################################################
+
+
+	public Vector3 GetPerpendicular(Vector3 carPosition, int ankerXBefore=0)
+	{
+		// get closest anchor
+		int closestAnchor = mod(GetClosestAnchor(carPosition) - ankerXBefore, anchorVector.Length);
+		int caPlus1 = closestAnchor+1;
+		int caMinus1 = closestAnchor-(1+ankerXBefore);
+		if (caPlus1 >= anchorVector.Length) { caPlus1 -= anchorVector.Length; }
+		if (caMinus1 < 0) { caMinus1 += anchorVector.Length; }
+
+		float offset = ProgressFromClosestAnchor(carPosition, anchorVector, closestAnchor);
+		Vector3 fromCAtoP = new Vector3();
+		if (offset >= 0.0f) { fromCAtoP = (anchorVector[caPlus1]-anchorVector[closestAnchor])*offset; }
+		else { fromCAtoP = (anchorVector[caMinus1]-anchorVector[closestAnchor])*Mathf.Abs(offset); }
+		Vector3 perpendicular = anchorVector[closestAnchor]+fromCAtoP;
+		perpendicular.y = carPosition.y;
+		return perpendicular;
+	}
+
+	public void ShowPerpendicular()
+	{
+		Marker.transform.position =  GetPerpendicular(timedCar.transform.position);
+	}
+
+
+	//finds the vector with the smallest euclidian distance to the car.
+	int GetClosestAnchor(Vector3 position)
+	{
+		float[] distanceVector = new float[anchorVector.Length];
+		for (int i = 0; i < anchorVector.Length; i++) 
+		{
+			distanceVector[i] = Vector3.Distance(anchorVector[i],position);
+		}
+		int closestAnchor = distanceVector.ToList().IndexOf(distanceVector.Min());
+		return closestAnchor;
+	}
+
+
+	//das hier ist fürs Car resetten. Er soll ja nicht auf den Vektor vor sich resetten, sondern immer auf den hinter sich.
+	public int getClosestAnchorBehind(Vector3 carPosition) {
+		int closestAnchor = GetClosestAnchor(carPosition);
+		if (ProgressFromClosestAnchor (carPosition, anchorVector, closestAnchor) < 0.0f) {
+			closestAnchor -= 1;
+		}
+		return closestAnchor;
+	}
+
+
+	//converts the absolute position in anchors to a percentage of the whole track
+	float ProgressConvert(float progressRelative, float[] segmentLengths)
+	{
+		// get lower bound based on passed anchors
+		float trackLength = segmentLengths.Sum();
+		int anchorPassed = (int)Mathf.Floor(progressRelative);
+		float[] segmentLengthsPassed = segmentLengths.Take(anchorPassed).ToArray();
+		float progressDistance = segmentLengthsPassed.Sum(); // lower bound for progress
+
+		// add the distance of relative progress within the current segment 
+		float currentSegmentProgress;
+		try {
+			currentSegmentProgress = progressRelative-Mathf.Floor(progressRelative);
+			progressDistance += currentSegmentProgress*segmentLengths[anchorPassed];
+		} catch {
+			currentSegmentProgress = 0;
+		}
+
+		// return progress relative to track length
+		return progressDistance/trackLength;
+	}
+
+
+	//finds the value after the comma for the carposition relative to the vector (see above). This is all the LinA-stuff where we find a perpendicular etc.
+	float ProgressFromClosestAnchor(Vector3 P, Vector3[] anchorVector, int closestAnchor) // P = carPosition
+	{
+		// define which anchors are of intrest
+		int anchorA = closestAnchor-1;
+		int anchorB = closestAnchor;
+		int anchorC = closestAnchor+1;
+		if (anchorB == 0) { anchorA = anchorVector.Length-1; }
+		if (anchorB == anchorVector.Length-1 ) { anchorC = 0; }
+		Vector3 A = anchorVector[anchorA];
+		Vector3 B = anchorVector[anchorB];
+		Vector3 C = anchorVector[anchorC];
+
+		// get perpendicular point of carPosition on |AB|
+		Vector3 vectorAP = P-A;
+		Vector3 vectorAB = B-A;
+		Vector3 vectorBP = P-B;
+		Vector3 vectorBC = C-B;
+		Vector3 projectionAB = Vector3.Project(vectorAP, vectorAB); // projectionAB is a vector with origin in A, pointing to the perpendicular of P on AB
+		Vector3 projectionBC = Vector3.Project(vectorBP, vectorBC); // projectionBC is a vector with origin in B, pointing to the perpendicular of P on BC
+		Vector3 perpendicularPAB = vectorAP-projectionAB;
+		Vector3 perpendicularPBC = vectorBP-projectionBC;
+
+		float progressAB = projectionAB.x / vectorAB.x;
+		float progressBC = projectionBC.x / vectorBC.x;
+		if (progressAB > 0.0f && progressAB < 1.0f) // if the perpendicular falls between A&B...
+		{
+			if (perpendicularPAB.magnitude < perpendicularPBC.magnitude || progressBC <= 0.0f || progressBC > 1.0f) // ...and if either perpPAB is shorter than perpPBC, or perpPBC doesn't fall between B&C
+			{
+				return -(1.0f-progressAB);
+			}
+		}
+		if (progressBC > 0.0f && progressBC < 1.0f) // if the perpendicular falls between B&C (all other cases have already been caught in the lines above)
+		{
+			return progressBC;
+		}
+
+		// if the perpendicular point is neither on |AB| nor on |BC|, point B must be the closest - no correction needed.
+		return 0.0f;
+	}
+
+
+	static int ClosestSmallerThan(float[] collection, float target)
+	{
+		float minDifference = float.MaxValue;
+		int argClosest = int.MaxValue;
+		for (int i=0; i<collection.Length; i++)
+		{
+			if (target > collection[i])
+			{
+				float difference = Mathf.Abs(collection[i] - target);
+				if (minDifference > difference)
+				{
+					argClosest = i;
+					minDifference = difference;
+				}
+			} 
+		}
+		if (argClosest == int.MaxValue) {
+			//wenn der progress kleiner ist als alle listenprogresses
+			argClosest = 0;
+		}
+		return argClosest;
+	}
+
+	// #####################################################################
+	// #################### FUNCTIONS NEEDED FOR START() ###################
 	// #####################################################################
 
 	// 	##################### GET TRACK OUTLINE VECTOR #####################
@@ -179,6 +401,7 @@ public class PositionTracking : MonoBehaviour {
 		return segmentLengths;
 	}
 
+
 	//und anschliessend rechnen wir die kumulierte distanz ab dem startpunkt aus.
 	float[] GetAbsoluteAnchorDistances(float[] segmentLengths)
 	{
@@ -190,6 +413,7 @@ public class PositionTracking : MonoBehaviour {
 		}
 		return absoluteAnchorDistances;
 	}
+
 
 	//anhand der koordinaten von den vektoren konnen wir sagen wie viel gedreht der nachste punkt in relation zur gerade der 2 vorherigen ist...
 	public float[] GetSegmentAngles(Vector3[] anchorVector, bool normalized=false)
@@ -217,6 +441,7 @@ public class PositionTracking : MonoBehaviour {
 		}
 		return segmentAngles;
 	}
+
 
 	//...und summieren wir das alles auf haben wir den absoluten winkel von jedem einzelnem anchor. 
 	float[] GetAbsoluteAnchorAngles(float[] segmentAngles)
@@ -246,6 +471,7 @@ public class PositionTracking : MonoBehaviour {
 		return anchorProgress;
 	}
 
+
 	//zeigt die vektoren in unity
 	void ShowAnchors(Vector3[] anchorVector, GameObject anchorPrototype, GameObject countText, string hoverText="count") 
 	{
@@ -270,153 +496,7 @@ public class PositionTracking : MonoBehaviour {
 	//  1   pos(anchor1)    ||A1-A0||        ...                                               0.564%
 	// ...
 
-	// #####################################################################
-	// ###################### FUNCTIONS FOR PROGRESS #######################
-	// #####################################################################
 
-	//gets the progress of the car. How? by getting the euclidianly nearest anchor, and also the relative position from the car to this vector (if its +0.4 in front of it for example)
-	//for that, after finding the nearest anchor it takes this one (B), the one before (A) and the one after (C) it, and finds a point (D) on AB as well as BC, which has a vector to the coordinates of the car (P)
-	//which is perpendicular to AB bzw. BC. (the length of this line is btw the distance from car to center). Then it looks which of those two lines is shorter, and it thus knows if its rather before point B 
-	//or after it. Then it interpolates between, say, A and B and sees where D lies percentually in closeness to B. that percentage with either negativ or positive sign is then the more precise position.
-	//this absolute value ("the car is at anchor 15,45") is then converted into a percentage, by taking the lengths of the first 15 + 0.45 the distance between 15 and 16, divided by the gesamtlength.
-	//the "length of this line" is precondition for two of the shown vektor on the screen!
-	float GetProgress(Vector3[] anchorVector, float[] segmentLengths, Vector3 carPosition) 
-	{
-		// get car closest anchor
-		int closestAnchor = GetClosestAnchor(carPosition);
-
-		// calculate progress on a scale from 0 to anchorVector.Length, i.e. track progress in "number of anchors" 
-		float progressInAnchors = closestAnchor*1.0f;
-		progressInAnchors += ProgressFromClosestAnchor(carPosition, anchorVector, closestAnchor);
-		if (progressInAnchors < 0.0f) { progressInAnchors += segmentLengths.Length; }
-
-		// convert track progress from anchor-based to meters to percent
-		float progress = ProgressConvert(progressInAnchors,segmentLengths); // progress from 0 to 1
-		if (!Car.Timing.activeLap)
-			progress = progress - 1.0f;
-		if (Car.Timing.activeLap && !Car.Timing.ccPassed && progress > 0.5f)
-			progress -= 1.0f;
-		if (progress < -0.99f)
-			progress += 1.0f;
-		return progress;
-	}
-
-	//finds the vector with the smallest euclidian distance to the car.
-	int GetClosestAnchor(Vector3 position)
-	{
-		float[] distanceVector = new float[anchorVector.Length];
-		for (int i = 0; i < anchorVector.Length; i++) 
-		{
-			distanceVector[i] = Vector3.Distance(anchorVector[i],position);
-		}
-		int closestAnchor = distanceVector.ToList().IndexOf(distanceVector.Min());
-		return closestAnchor;
-	}
-
-	//das hier ist fürs Car resetten. Er soll ja nicht auf den Vektor vor sich resetten, sondern immer auf den hinter sich.
-	public int getClosestAnchorBehind(Vector3 carPosition) {
-		int closestAnchor = GetClosestAnchor(carPosition);
-		if (ProgressFromClosestAnchor (carPosition, anchorVector, closestAnchor) < 0.0f) {
-			closestAnchor -= 1;
-		}
-		return closestAnchor;
-	}
-
-
-	//converts the absolute position in anchors to a percentage of the whole track
-	float ProgressConvert(float progressRelative, float[] segmentLengths)
-	{
-		// get lower bound based on passed anchors
-		float trackLength = segmentLengths.Sum();
-		int anchorPassed = (int)Mathf.Floor(progressRelative);
-		float[] segmentLengthsPassed = segmentLengths.Take(anchorPassed).ToArray();
-		float progressDistance = segmentLengthsPassed.Sum(); // lower bound for progress
-
-		// add the distance of relative progress within the current segment 
-		float currentSegmentProgress;
-		try {
-			currentSegmentProgress = progressRelative-Mathf.Floor(progressRelative);
-			progressDistance += currentSegmentProgress*segmentLengths[anchorPassed];
-		} catch {
-			currentSegmentProgress = 0;
-		}
-
-		// return progress relative to track length
-		return progressDistance/trackLength;
-	}
-
-	//finds the value after the comma for the carposition relative to the vector (see above). This is all the LinA-stuff where we find a perpendicular etc.
-	float ProgressFromClosestAnchor(Vector3 P, Vector3[] anchorVector, int closestAnchor) // P = carPosition
-	{
-		// define which anchors are of intrest
-		int anchorA = closestAnchor-1;
-		int anchorB = closestAnchor;
-		int anchorC = closestAnchor+1;
-		if (anchorB == 0) { anchorA = anchorVector.Length-1; }
-		if (anchorB == anchorVector.Length-1 ) { anchorC = 0; }
-		Vector3 A = anchorVector[anchorA];
-		Vector3 B = anchorVector[anchorB];
-		Vector3 C = anchorVector[anchorC];
-
-		// get perpendicular point of carPosition on |AB|
-		Vector3 vectorAP = P-A;
-		Vector3 vectorAB = B-A;
-		Vector3 vectorBP = P-B;
-		Vector3 vectorBC = C-B;
-		Vector3 projectionAB = Vector3.Project(vectorAP, vectorAB); // projectionAB is a vector with origin in A, pointing to the perpendicular of P on AB
-		Vector3 projectionBC = Vector3.Project(vectorBP, vectorBC); // projectionBC is a vector with origin in B, pointing to the perpendicular of P on BC
-		Vector3 perpendicularPAB = vectorAP-projectionAB;
-		Vector3 perpendicularPBC = vectorBP-projectionBC;
-
-		float progressAB = projectionAB.x / vectorAB.x;
-		float progressBC = projectionBC.x / vectorBC.x;
-		if (progressAB > 0.0f && progressAB < 1.0f) // if the perpendicular falls between A&B...
-		{
-			if (perpendicularPAB.magnitude < perpendicularPBC.magnitude || progressBC <= 0.0f || progressBC > 1.0f) // ...and if either perpPAB is shorter than perpPBC, or perpPBC doesn't fall between B&C
-			{
-				return -(1.0f-progressAB);
-			}
-		}
-		if (progressBC > 0.0f && progressBC < 1.0f) // if the perpendicular falls between B&C (all other cases have already been caught in the lines above)
-		{
-			return progressBC;
-		}
-
-		// if the perpendicular point is neither on |AB| nor on |BC|, point B must be the closest - no correction needed.
-		return 0.0f;
-	}
-
-	//this is unneeded?
-//	Vector3 GetLocalPerpendicular(Vector3 A, Vector3 B, Vector3 P)
-//	{
-//		Vector3 vectorAP = P-A;
-//		Vector3 vectorAB = B-A;
-//		Vector3 projectionAB = Vector3.Project(vectorAP, vectorAB); // projectionAB is a vector with origin in A, pointing to the perpendicular of P on AB
-//		return vectorAP-projectionAB; // perpendicular from P on AB
-//	}
-
-	static int ClosestSmallerThan(float[] collection, float target)
-	{
-		float minDifference = float.MaxValue;
-		int argClosest = int.MaxValue;
-		for (int i=0; i<collection.Length; i++)
-		{
-			if (target > collection[i])
-			{
-				float difference = Mathf.Abs(collection[i] - target);
-				if (minDifference > difference)
-				{
-					argClosest = i;
-					minDifference = difference;
-				}
-			} 
-	    }
-		if (argClosest == int.MaxValue) {
-			//wenn der progress kleiner ist als alle listenprogresses
-			argClosest = 0;
-		}
-		return argClosest;
-	}
 
 	// #####################################################################
 	// ######################### TRIGGER HANDLING ##########################
@@ -434,65 +514,6 @@ public class PositionTracking : MonoBehaviour {
 			triggerCount = 0;
 		}
 		lastProgress = progress;
-	}
-
-	// #####################################################################
-	// ########################## OTHER FUNCTIONS ##########################
-	// #####################################################################
-
-	public float GetCenterDist()
-	{
-		// get coordinates
-		Vector3 carPosition = timedCar.transform.position;
-		Vector3 perpendicularPoint = GetPerpendicular(carPosition);
-
-		// get sign for centerDist
-		int anchor = ClosestSmallerThan(anchorProgress, progress);
-		if (anchor >= anchorVector.Length) { anchor -= anchorVector.Length; }
-		int anchorPlus1 = anchor+1;
-		if (anchorPlus1 >= anchorVector.Length) { anchorPlus1 -= anchorVector.Length; }
-		Vector3 AB = new Vector3();
-		try {
-			AB = anchorVector[anchorPlus1]-anchorVector[anchor];
-		}
-		catch {
-			UnityEngine.Debug.Log ("ERROR ERROR 123");
-			UnityEngine.Debug.Log (anchor);
-			UnityEngine.Debug.Log (anchorProgress.Length);
-			UnityEngine.Debug.Log (anchorVector [anchor]);
-			UnityEngine.Debug.Log (anchorPlus1);
-			UnityEngine.Debug.Log (anchorVector [anchorPlus1]);
-		}
-		Vector3 PC = carPosition-perpendicularPoint;
-		Vector3 cross = Vector3.Cross(AB,PC);
-
-		// output
-		float centerDist = PC.magnitude;
-		if (cross.y<0.0f) { centerDist = -centerDist; }
-		return centerDist;
-	}
-
-	public Vector3 GetPerpendicular(Vector3 carPosition, int ankerXBefore=0)
-	{
-		// get closest anchor
-		int closestAnchor = mod(GetClosestAnchor(carPosition) - ankerXBefore, anchorVector.Length);
-		int caPlus1 = closestAnchor+1;
-		int caMinus1 = closestAnchor-(1+ankerXBefore);
-		if (caPlus1 >= anchorVector.Length) { caPlus1 -= anchorVector.Length; }
-		if (caMinus1 < 0) { caMinus1 += anchorVector.Length; }
-
-		float offset = ProgressFromClosestAnchor(carPosition, anchorVector, closestAnchor);
-		Vector3 fromCAtoP = new Vector3();
-		if (offset >= 0.0f) { fromCAtoP = (anchorVector[caPlus1]-anchorVector[closestAnchor])*offset; }
-		else { fromCAtoP = (anchorVector[caMinus1]-anchorVector[closestAnchor])*Mathf.Abs(offset); }
-		Vector3 perpendicular = anchorVector[closestAnchor]+fromCAtoP;
-		perpendicular.y = carPosition.y;
-		return perpendicular;
-	}
-
-	public void ShowPerpendicular()
-	{
-		Marker.transform.position =  GetPerpendicular(timedCar.transform.position);
 	}
 
 }

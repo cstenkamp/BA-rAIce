@@ -7,8 +7,6 @@ using System.IO;
 using System.Threading;
 using System.Linq;
 
-//TODO probeweise könnte man python zusätzlich alle keys aufnehmen können, und durch den druck einer speziellen Taste sende ich das kommando an python dass es
-//     resetten soll und alle keys nochmal genauso drücken soll
 
 public class Recorder : MonoBehaviour {
 

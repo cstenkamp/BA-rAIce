@@ -321,12 +321,12 @@ public class AsynchronousClient {  //updating python's value should happen async
 						lastRTs.Enqueue(pythonreactiontime);
 						if (timestampStarted == AiInt.lastpythonupdate || timestampStarted == AiInt.penultimatepythonupdate) { //If you got the last one, you should be fine as python works on what you send him one after the other.
 							//AiInterface.print("Unfreezing because Connection Delay resolved");
-							Car.shouldUnQuickpauseReason = "ConnectionDelay";
+							Car.Game.shouldUnQuickpauseReason = "ConnectionDelay";
 							lastRTs.Clear ();
 						} else if (lastRTs.getAverage() > 2*Consts.MAX_PYTHON_RT) { //If there is too much of a delay from python, rather freeze the game
 							//AiInterface.print("Freezing because of Connection Delay");
 							lastRTs.Clear (); //lastRTs.Dequeue();
-							Car.shouldQuickpauseReason = "ConnectionDelay";
+							Car.Game.shouldQuickpauseReason = "ConnectionDelay";
 						}
 
 						othercommand = false;

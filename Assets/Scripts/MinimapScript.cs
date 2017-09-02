@@ -4,8 +4,8 @@ using UnityEngine;
 using System;
 using System.Text;
 using System.Linq;
-
 using UnityEngine.UI;
+
 
 //http://answers.unity3d.com/questions/27968/getpixels-of-rendertexture.html
 //https://stackoverflow.com/questions/32996534/rendering-complete-camera-view169-onto-a-texture-in-unity3d
@@ -20,11 +20,12 @@ public class MinimapScript : MonoBehaviour {
 	Rect showRect; Rect sendRect; Rect readRect;
 	RenderTexture myRT;
 	Texture2D myImg;
+	public float showRectXCoordinate;
 
 	void Start() {
 		Camera cam = gameObject.GetComponent<Camera> ();
 		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
-		showRect = new Rect(0.88f, 0.63f, 0.1f, 0.25f);
+		showRect = new Rect(showRectXCoordinate, 0.63f, 0.1f, 0.25f);
 		cam.rect = showRect;
 		PrepareVision ();
 	}

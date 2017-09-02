@@ -1,9 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System;
-using System.Linq;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 public class CarController : MonoBehaviour {
 
@@ -27,7 +26,6 @@ public class CarController : MonoBehaviour {
 
 	public bool lapClean;
 	public bool justrespawned = false;
-	public bool ShowThisGUI = false;
 	string surfaceFL;
 	string surfaceFR;
 	string surfaceRL;
@@ -54,9 +52,6 @@ public class CarController : MonoBehaviour {
 	float deltaTime;
 	public float velocity;
 	public float velocityOfPerpendiculars;
-	public List<string> FreezeReasons;
-	public string shouldQuickpauseReason = "";
-	public string shouldUnQuickpauseReason = ""; //they would be bools, but as I also need to specify the reason, they're strings ("" or content)
 
 	// Use this for initialization
 	void Start ()
@@ -119,7 +114,7 @@ public class CarController : MonoBehaviour {
 			//velocity = deltaPosition / deltaTime * 3.6f; If you leave it like this, the velocity will be incredibly high after a reset, leading to the ANN not learning. Took me 3 month to find this.
 			velocity = Car.velocity.magnitude*3.6f;
 			velocityOfPerpendiculars = deltaPositionPerpendicular / deltaTime * 3.6f;
-			velocityOfPerpendiculars = (velocityOfPerpendiculars > velocity ? GetSpeedInDir()[0] : velocityOfPerpendiculars); //for safety, I'm pretty sure theres no reason anymore they are faster, but this is safer.
+			velocityOfPerpendiculars = (velocityOfPerpendiculars > velocity ? AiInt.Tracking.GetSpeedInDir()[0] : velocityOfPerpendiculars); //for safety, I'm pretty sure theres no reason anymore they are faster, but this is safer.
 			lastb1Position = lastPosition != transform.position ? lastPosition : lastb1Position; //last-but-one updates only if the car moved (used in wallidstance)
 			lastPosition = transform.position;
 			lastPerpendicularPosition = Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position);
@@ -181,51 +176,12 @@ public class CarController : MonoBehaviour {
 		return (x%m + m)%m;
 	}
 
-	public float[] GetSpeedInDir() 
-	{
-		Vector3 Vecbehind = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)-1, Timing.Rec.Tracking.anchorVector.Length-1)];
-		Vector3 Vec1before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+1, Timing.Rec.Tracking.anchorVector.Length-1)]; 
-		Vector3 Vec4before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+4, Timing.Rec.Tracking.anchorVector.Length-1)]; 
-		Vector3 Vec8before = Timing.Rec.Tracking.anchorVector[mod(Timing.Rec.Tracking.getClosestAnchorBehind(Car.position)+8, Timing.Rec.Tracking.anchorVector.Length-1)]; 
-
-		Vector3 shortStreetDir = (Vec1before - Vecbehind).normalized; shortStreetDir /= shortStreetDir.magnitude;
-		Vector3 longStreetDir = (Vec8before - Vec1before).normalized; longStreetDir /= longStreetDir.magnitude;
-
-		Vector3 traverseDir = Vector3.Cross(shortStreetDir, Vector3.up); traverseDir /= traverseDir.magnitude;
-
-		float sign = (Vector3.Dot (traverseDir, longStreetDir) > 0) ? -1.0f : 1.0f;
-		float CurvinessBeforeCar = Mathf.Round ((Vector3.Dot (shortStreetDir, longStreetDir))* 100) / 100;
-		CurvinessBeforeCar = (1.0f-CurvinessBeforeCar)*sign;
-
-		float inStreetDir = Mathf.Round ((Vector3.Dot (Car.velocity, (Vec4before - Vecbehind).normalized))*3.6f * 100) / 100;
-		float inTraverDir = Mathf.Round ((Vector3.Dot (Car.velocity, traverseDir))*3.6f * 100) / 100;
-
-		float[] Vec = new float[3] {inStreetDir, inTraverDir, CurvinessBeforeCar};
-		return Vec;
-	}
-
 
 	void Update()
 	{
-		if (shouldQuickpauseReason != "") { //since some QuickPause-functions are not threadsafe, I can only set a variable from them such that the main-thread does that instead.
-			QuickPause (shouldQuickpauseReason);
-			shouldQuickpauseReason = "";
-		}
-		if (shouldUnQuickpauseReason != "") {
-			UnQuickPause (shouldUnQuickpauseReason);
-			shouldUnQuickpauseReason = "";
-		}
-
-		if (Input.GetKeyDown(KeyCode.Q)) {   
-			if (Game.mode.Contains ("driving")) {
-				QuickPause ("Manual");
-			} else {
-				UnQuickPause ("Manual"); 
-			}
-		}
-
 		if (Game.mode.Contains("driving"))
 		{
+
 			// reverse gear
 			if (Input.GetKeyDown(KeyCode.R)) {
 				if ((Game.mode.Contains("keyboarddriving")) || (AiInt.HumanTakingControl)) {
@@ -281,36 +237,18 @@ public class CarController : MonoBehaviour {
 
 		}
 
-		// pause & exit to menu
-		if (Input.GetKeyDown(KeyCode.Escape)) { Game.SwitchMode("menu"); }
-
-		// reconnect to server
-		if (Input.GetKeyDown(KeyCode.C)) {   
-			if (AiInt.AIMode) {
-				AiInt.Reconnect(); 
-			}
-		}
-
-		// disconnect from server
-		if (Input.GetKeyDown (KeyCode.D)) { 
-			if (AiInt.AIMode) {
-				AiInt.Disconnect(); 
-			}
-		}
-
-		//human taking control over AI
-		if (Input.GetKeyDown (KeyCode.H)) { 
-			if (AiInt.AIMode && (!Game.mode.Contains ("keyboarddriving"))) {
-				AiInt.FlipHumanTakingControl();
-				Game.UserInterface.UpdateGameModeDisp ();
-			}
-		}
 	}
 
 	public void ResetCar(bool send_python) {
 		UnityEngine.Debug.Log ("Car resettet" + DateTime.Now.ToString());
 		Game.Timing.Stop_Round ();
 		ResetToPosition (startPosition, startRotation, false, send_python);
+	}
+
+
+	public void ResetToPosition(Vector3 Position, Quaternion Rotation)
+	{
+		ResetToPosition (Position, Rotation, false, false);
 	}
 
 	public void ResetToPosition(Vector3 Position, Quaternion Rotation, bool make_valid, bool send_python)
@@ -357,13 +295,13 @@ public class CarController : MonoBehaviour {
 	}
 
 
-	public void ResetCarWithSpeed() {
-		//TODO: das hier ist der cheater-modus, aber hier den perfekten reset machen!
-		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
-
-
-		AiInt.SendToPython ("reset");
-	}
+//	public void ResetCarWithSpeed() {
+//		//TODO: das hier ist der cheater-modus, aber hier den perfekten reset machen!
+//		//TODO: recorder und timingscript haben beide auch reset-funktionen, müssen die nicht genutzt werden?
+//
+//
+//		AiInt.SendToPython ("reset");
+//	}
 
 
 
@@ -489,43 +427,6 @@ public class CarController : MonoBehaviour {
 	public void LapCleanTrue()
 	{
 		lapClean = true;
-	}
-
-
-	//the Quick-pause function, triggered by Q or the python-client
-	public void QuickPause(string reason) {
-		if (Game.mode.Contains ("driving")) {
-			FreezeReasons.Add (reason);
-			UnityEngine.Debug.Log ("Freezing because " + reason);
-			Game.mode = Game.mode.Where (val => val != "driving").ToArray ();
-			Game.UserInterface.DriveModeDisplay.text = "GAME ON PAUSE";
-			Time.timeScale = 0; //only affects fixedupdate, NOT Update!!!
-			Game.CarCamera.SetActive (false); 
-			ShowThisGUI = true;
-		}
-	}
-
-
-
-	public void UnQuickPause(string reason) {
-		if ( (!Game.mode.Contains ("driving")) && (!Game.mode.Contains ("menu"))) {
-			if (reason == "All")
-				FreezeReasons.Clear();
-			else
-				FreezeReasons.Remove (reason);
-			if (!FreezeReasons.Any()) {
-				if (AiInt.AIMode || Game.mode.Contains("train_AI")) {
-					AiInt.load_infos(true, false);
-					AiInt.lastgetvectortime = AiInterface.MSTime ();
-				}
-				Game.mode = (Game.mode ?? Enumerable.Empty<string> ()).Concat (new[] { "driving" }).ToArray ();
-				Game.UserInterface.UpdateGameModeDisp ();
-				Game.CarCamera.SetActive (true);
-				Time.timeScale = 1; //TODO: auf den alten wert, wenn ich variable zeit erlaube 
-				if (AiInt.AIMode)
-					AiInt.load_infos (false, true);
-			}
-		}
 	}
 
 }

@@ -140,7 +140,7 @@ public class UIScript : MonoBehaviour {
 			}
 
 
-			if (Game.Car.ShowThisGUI) {
+			if (Game.ShowQuickPauseGUI) {
 				RenderTexture myRT = new RenderTexture (1, 1, 24);  //,RenderTextureFormat.ARGB32
 				myRT.Create ();
 				GUI.DrawTexture (new Rect (10, 10, 60, 60), myRT, ScaleMode.ScaleToFit, true, 10.0F);
