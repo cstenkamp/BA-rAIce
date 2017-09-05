@@ -112,14 +112,14 @@ public class AiInterface : MonoBehaviour {
 			lastCarPos = Car.Car.position;
 			lastCarRot = Car.Car.rotation;
 			resetTimes ();
-			if (Consts.usecameras) {
-				Minmap.PrepareVision (Consts.visiondisplay_x, Consts.visiondisplay_y);
-				Minmap2.PrepareVision (Consts.visiondisp2_x, Consts.visiondisp2_y);
-			}
 			lastpythonsent = "";
 			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
 			lastpythonresults = new FixedSizedQueue<AsynchronousClient.Response> (20);
 			AIMode = true;
+			if (Consts.usecameras) {
+				Minmap.PrepareVision (Consts.visiondisplay_x, Consts.visiondisplay_y);
+				Minmap2.PrepareVision (Consts.visiondisp2_x, Consts.visiondisp2_y);
+			}
 		}
 	}
 
@@ -461,6 +461,8 @@ public class AiInterface : MonoBehaviour {
 		if (Consts.usecameras) {
 			all.Append ("V1(" +  Minmap.GetVisionDisplay () + ")");
 
+			UnityEngine.Debug.Log (Minmap.GetVisionDisplay ());
+			
 			if (Consts.secondcamera)
 				all.Append ("V2(" + Minmap2.GetVisionDisplay () + ")");
 		}
