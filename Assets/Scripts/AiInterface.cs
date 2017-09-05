@@ -460,8 +460,6 @@ public class AiInterface : MonoBehaviour {
 
 		if (Consts.usecameras) {
 			all.Append ("V1(" +  Minmap.GetVisionDisplay () + ")");
-
-			UnityEngine.Debug.Log (Minmap.GetVisionDisplay ());
 			
 			if (Consts.secondcamera)
 				all.Append ("V2(" + Minmap2.GetVisionDisplay () + ")");
