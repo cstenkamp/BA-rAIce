@@ -42,6 +42,7 @@ public class GameScript : MonoBehaviour {
 			((Camera)MiniMapCam2.GetComponent<Camera>()).orthographicSize = 15;
 			MiniMapCam2.transform.localPosition= new Vector3 (MiniMapCam2.transform.localPosition.x, MiniMapCam2.transform.localPosition.y, 15); // Leon's preferred setting: 15
 		}
+
         OverviewCamera.SetActive(true);
 		if (Rec.LoadLap("fastlap"))
 		{

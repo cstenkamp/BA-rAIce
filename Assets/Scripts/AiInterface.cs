@@ -19,11 +19,7 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int MAX_PYTHON_RT = 50;
 	public const bool fixedresultusagetime = true;
 	public const bool interpolateresults = false;
-
-	public const int visiondisplay_x = 30; //30
-	public const int visiondisplay_y = 45; //45
-	public const int visiondisp2_x = 30; //30
-	public const int visiondisp2_y = 45; //45
+	public const int maxSpeed = 9999; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
 
 	public const bool debug_showperpendicular = false;
 	public const bool debug_showanchors = false;
@@ -33,14 +29,16 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const bool sei_verzeihender = true;
 	public const bool wallhit_means_reset = true;
 
-	public const bool usecameras = true;
-	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript
+	public const bool usecameras = true; //only for AI-mode
+	public const bool secondcamera = true; //the sizes of the cameras are set in the Start() of GameScript //if you disable this, it will be completely disabled!
 	public const bool SeeCurbAsOff = false;
+	public const int visiondisplay_x = 30; //30
+	public const int visiondisplay_y = 45; //45
+	public const int visiondisp2_x = 30; //30
+	public const int visiondisp2_y = 45; //45
 
 	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 	public const bool trainAIMode_RestartAfterWallhit = true;
-
-	public const int maxSpeed = 9999; //!!! wenn das aktiv ist KANN er nicht shcneller als maxSpeed fahren. zum testen, das macht das rennen einfacher.
 }
 
 //================================================================================
@@ -115,8 +113,8 @@ public class AiInterface : MonoBehaviour {
 			lastCarRot = Car.Car.rotation;
 			resetTimes ();
 			if (Consts.usecameras) {
-				Minmap.PrepareVision ();
-				Minmap2.PrepareVision ();
+				Minmap.PrepareVision (Consts.visiondisplay_x, Consts.visiondisplay_y);
+				Minmap2.PrepareVision (Consts.visiondisp2_x, Consts.visiondisp2_y);
 			}
 			lastpythonsent = "";
 			lastUsedPythonResult = new AsynchronousClient.Response (null, null);
@@ -125,12 +123,14 @@ public class AiInterface : MonoBehaviour {
 		}
 	}
 
+
 	public void resetTimes() {
 		lastpythonupdate =  UnityTime();
 		lastgetvectortime = UnityTime();	
 		lastresultusagetime = UnityTime();	
 		Rec.lasttrack = UnityTime ();
 	}
+
 
 	// Update is called once per frame, and, in contrast to FixedUpdate, also runs when the game is frozen, hence the UnQuickPause here
 	void Update () {
@@ -182,6 +182,7 @@ public class AiInterface : MonoBehaviour {
 			}
 		}
 	}
+
 
 	// FixedUpdate is run every physics-timestep, which is independent of framerate and times precisely in Unity-time
 	void FixedUpdate() {
@@ -284,11 +285,13 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
-	public void punish_wallhit() {
+	public bool notify_wallhit() {
 		if (AIMode) {
 			SendToPython ("wallhit"); //ist das doppelt gemoppelt?
 			just_hit_wall = true;
-		}
+			return true;
+		} 
+		return false;
 	}
 
 	public void EndRound(bool lapClean) {
@@ -366,7 +369,7 @@ public class AiInterface : MonoBehaviour {
 			data = "STime(" + currtime + ")" + data;
 		}
 
-		var t =	 new Thread(() => SenderClient.SendAufJedenFall(data));
+		var t =	 new Thread(() => SenderClient.SendInAnyCase(data));
 		t.Start();
 
 	}
@@ -464,12 +467,11 @@ public class AiInterface : MonoBehaviour {
 		
 		//all += "R"+ string.Join (",", GetProgressVector ().Select (x => (Math.Round(x,4)).ToString ()).ToArray ()) + ")";
 
-		//TODO: gucken welche vektoren ich brauche
-		//TODO: klären ob ich den Progress als number oder als vector brauche
 		//TODO: vom carstatusvektor fehlen noch ganz viele
 
 		return all.ToString ();
 	}
+
 
 
 	public float[] GetStraightWallDist() {
@@ -548,6 +550,7 @@ public class AiInterface : MonoBehaviour {
 	}
 
 
+
 	public float[] GetSpeedSteer() {
 		float velo = Car.velocity;
 		float velo2 = Car.velocityOfPerpendiculars;
@@ -588,15 +591,6 @@ public class AiInterface : MonoBehaviour {
 		float[] SpeedSteerVec = new float[11] { RLTorque, RRTorque, colliderFL.steerAngle, colliderFR.steerAngle, velo, Convert.ToInt32(Tracking.rightDirection), velo2, Tracking.getCarAngle(), velo345[0], velo345[1], velo345[2]};
 		return SpeedSteerVec;
 	}
-
-
-	//diese funktion wäre nötig für eine perfekt-reset-funktion
-//	public void SetSpeedSteer(float[] SpeedSteerVec) {
-//		colliderRL.motorTorque = SpeedSteerVec [0];
-//		colliderRR.motorTorque = SpeedSteerVec [1];
-//		colliderFL.steerAngle = SpeedSteerVec [2];
-//		colliderFR.steerAngle = SpeedSteerVec [3];
-//	}
 
 
 
@@ -692,13 +686,6 @@ public class AiInterface : MonoBehaviour {
 		// slip angle RR																		# 1
 		return carStatusVector;
 	}
-
-
-	public void SetCarStatusFromVector(float[] carStatusVector) {
-		Car.velocity = carStatusVector [0] * 200;
-		//TODO: 'setslip' undso... falls das geht.
-	}
-
 
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

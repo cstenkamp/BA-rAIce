@@ -20,24 +20,31 @@ public class MinimapScript : MonoBehaviour {
 	Rect showRect; Rect sendRect; Rect readRect;
 	RenderTexture myRT;
 	Texture2D myImg;
+	Camera owncam;
+
 	public float showRectXCoordinate;
+	public int xPixels;
+	public int yPixels;
+
 
 	void Start() {
-		Camera cam = gameObject.GetComponent<Camera> ();
-		cam.aspect = (Consts.visiondisplay_x + 0.0f) / Consts.visiondisplay_y; //0.5f;
+		owncam = gameObject.GetComponent<Camera> ();
 		showRect = new Rect(showRectXCoordinate, 0.63f, 0.1f, 0.25f);
-		cam.rect = showRect;
-		PrepareVision ();
+		owncam.rect = showRect;
 	}
 
 
-	public void PrepareVision() {
+	public void PrepareVision(int xLen, int yLen) {
+		xPixels = xLen;
+		yPixels = yLen;
+		owncam = gameObject.GetComponent<Camera> ();
+		owncam.aspect = (xPixels + 0.0f) / yPixels; //0.5f;
 		if (Game.AiInt.AIMode || Game.Rec.SV_SaveMode) {
 			sendRect = new Rect (0, 0, 1, 1);
-			readRect = new Rect (0, 0, Consts.visiondisplay_x, Consts.visiondisplay_y);
-			myRT = new RenderTexture (Consts.visiondisplay_x, Consts.visiondisplay_y, 24);
+			readRect = new Rect (0, 0, xPixels, yPixels);
+			myRT = new RenderTexture (xPixels, yPixels, 24);
 			myRT.Create ();
-			myImg = new Texture2D (Consts.visiondisp2_x, Consts.visiondisp2_y, TextureFormat.RGB24, false); //false = no mipmaps
+			myImg = new Texture2D (xPixels, yPixels, TextureFormat.RGB24, false); //false = no mipmaps
 		}
 	}
 
@@ -68,7 +75,7 @@ public class MinimapScript : MonoBehaviour {
 			cam.rect = showRect;
 
 		// return imgToArray(myImg); dann müsste man danach noch TwoDImageToStr aufrufen, aber das ist sinnlos
-		return imgToStr(myImg);
+		return imgToStr(myImg, xPixels, yPixels);
 
 		} catch (Exception e) {
 			UnityEngine.Debug.Log ("Flare renderer to update not found - in UnityEngine.Camera:Render()");
@@ -78,16 +85,15 @@ public class MinimapScript : MonoBehaviour {
 
 
 
-	//Diese noch komplett machen, dafür die utnere twodarraytostr nutzen. Auch SeeCurbAsOff verwenden
-	public static string imgToStr(Texture2D myImg) {
+	public static string imgToStr(Texture2D myImg, int xLen, int yLen) {
 
-		StringBuilder alltext = new StringBuilder((Consts.visiondisplay_x*Consts.visiondisplay_y)+Consts.visiondisplay_x); //letztes für die kommas
-		StringBuilder currline = new StringBuilder(Consts.visiondisplay_y);
+		StringBuilder alltext = new StringBuilder((xLen*yLen)+xLen); //letztes für die kommas
+		StringBuilder currline = new StringBuilder(yLen);
 		try {
 			if (Consts.SeeCurbAsOff) {
 				
 				for (int i = 0; i < myImg.width; i++) {
-					currline = new StringBuilder(Consts.visiondisplay_y);
+					currline = new StringBuilder(yLen);
 					for (int j = 0; j < myImg.height; j++) {
 						if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
 							currline.Append("1");
@@ -102,7 +108,7 @@ public class MinimapScript : MonoBehaviour {
 			} else {
 				
 				for (int i = 0; i < myImg.width; i++) {
-					currline = new StringBuilder(Consts.visiondisplay_y);
+					currline = new StringBuilder(yLen);
 					for (int j = 0; j < myImg.height; j++) {
 						if ((float)myImg.GetPixel (i, j).grayscale > 0.8) //street
 							currline.Append("2");

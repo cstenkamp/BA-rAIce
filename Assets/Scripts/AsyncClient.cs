@@ -1,8 +1,4 @@
-﻿//MAIN TODO HIER: 
-//4. Feedback und Delta mitsenden
-//5. Am Anfang des Spiels die globalen params mitschicken (like, welche vektoren er senden wird), damit man nicht beides in python UND unity ändern muss
-
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -138,7 +134,7 @@ public class AsynchronousClient {  //updating python's value should happen async
 /////////////////////////////////////// used only for senderclient ///////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
-	public void SendAufJedenFall(String data) {
+	public void SendInAnyCase(String data) {
 		if (serverdown) 
 			return;
 		try {

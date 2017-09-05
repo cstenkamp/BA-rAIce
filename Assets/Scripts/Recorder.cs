@@ -28,13 +28,12 @@ public class Recorder : MonoBehaviour {
 
 	// für's komplette tracken fürs supervised-learning
 	public List<TrackingPoint> SVLearnLap;
-	//private const int trackAllXMS = 25; //wenn's 25 ist, geht auf jeden fall 50, 100, 200 und 250 als msperframe fürs supervisednet, das will ich. Bei alle 10ms wäre das file aber 4 MB -> 25
 
 	public void StartedSV_SaveMode() {
 		SV_SaveMode = true;
 		if (Consts.usecameras) {
-			AiInt.Minmap.PrepareVision ();
-			AiInt.Minmap2.PrepareVision ();
+			AiInt.Minmap.PrepareVision (Consts.visiondisplay_x, Consts.visiondisplay_y);
+			AiInt.Minmap2.PrepareVision (Consts.visiondisp2_x, Consts.visiondisp2_y);
 		}
 		AiInt.resetTimes ();
 	}
@@ -163,17 +162,6 @@ public class Recorder : MonoBehaviour {
 		return 0.0f;
 	}
 
-
-	//TODO: nen flag, dass, wenn gesetzt, dafur sorgt dass er aufhort zu recorden
-
-//	public void ResetAll()
-//	{
-//		ResetLap ();
-//		lastLap = new List<PointInTime>();
-//		fastestLap = new List<PointInTime>();
-// 		//TODO: so wie das hier ist machts keinen Sinn. Er sollte auch die files loschen, und dafur sorgen dass das nicht direkt neu geladen wird
-//		//TODO: in die optionen ne funktion zum loschen aller laps, die diese function callt
-//	}
 
 
 	// ##################################
