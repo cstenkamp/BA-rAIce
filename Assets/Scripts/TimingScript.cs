@@ -48,10 +48,12 @@ public class TimingScript : MonoBehaviour {
 				if (Car.lapClean) {
 					lastLapTime = Time.time - currentLapStart + time_punishs;
 					timeSet = true;
-					if (!fastLapSet || (timeSet && lastLapTime < fastestLapTime)) { //wenn diese die erste oder letzte runde ist
-						fastestLapTime = lastLapTime;
-						fastestLapCount = lapCount;
-						fastLapSet = true;
+					if (!fastLapSet || (timeSet && lastLapTime < fastestLapTime)) { //wenn diese die erste oder schnellste runde ist
+						if ((Car.AiInt.AIMode && !Consts.lock_fastestlap_in_AIMode) || (!Car.AiInt.AIMode && !Consts.lock_fastestlap_in_Othermodes)) {
+							fastestLapTime = lastLapTime;
+							fastestLapCount = lapCount;
+							fastLapSet = true;
+						}
 					}
 					Rec.FinishList ();
 				}

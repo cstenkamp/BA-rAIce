@@ -37,6 +37,9 @@ public static class Consts { //TODO: diese hier an python schicken!
 	public const int visiondisp2_x = 30; //30
 	public const int visiondisp2_y = 45; //45
 
+	public const bool lock_fastestlap_in_AIMode = true;
+	public const bool lock_fastestlap_in_Othermodes = false;
+
 	public const bool trainAIMode_RestartAfterRound = true; //im drive_AI-modus entscheidet python ob am ende einer runde resettet wird, im train_AI-modus entscheidet das diese Variable.
 	public const bool trainAIMode_RestartAfterWallhit = true;
 }
@@ -278,7 +281,7 @@ public class AiInterface : MonoBehaviour {
 	public void resetCarAI() {
 		if (AIMode) {
 			ReceiverClient.response.reset ();
-			nn_brake = 0;
+			nn_brake = 0;x
 			nn_steer = 0;
 			nn_throttle = 0;
 		}
@@ -451,7 +454,7 @@ public class AiInterface : MonoBehaviour {
 		all.Append ("D("+Math.Round (Rec.GetDelta (), 2).ToString () + "," + Math.Round (Rec.GetFeedback (), 2).ToString ()+")");
 
 		float maybefakethrottle;
-		if (Input.GetKey (KeyCode.P))
+		if (Input.GetKey (KeyCode.P) && HumanTakingControl)
 			maybefakethrottle = 1;
 		else
 			maybefakethrottle = Car.throttlePedalValue;
@@ -510,7 +513,7 @@ public class AiInterface : MonoBehaviour {
 
 
 		//SHORTSIGHTED...
-		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 2));
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -1) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 1));
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
@@ -518,7 +521,7 @@ public class AiInterface : MonoBehaviour {
 			result[3] = Vector3.Distance (ray.origin, hit.point); //shortsighted from car, direction the STREET GOES
 		}
 
-		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 2));
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -1) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, 1));
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 300, RayCastMask)) {
@@ -527,7 +530,7 @@ public class AiInterface : MonoBehaviour {
 		}
 
 		//LONGSIGHTED...
-		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -4) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -5) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
@@ -535,7 +538,7 @@ public class AiInterface : MonoBehaviour {
 			result[5] = Vector3.Distance (ray.origin, hit.point); //longsighted from car, direction the STREET GOES
 		}
 
-		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -4) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
+		rot = Quaternion.LookRotation (Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position, -5) - Game.Timing.Rec.Tracking.GetPerpendicular (Car.transform.position));
 
 		ray = new Ray (pos, rot*Vector3.forward);
 		if (Physics.Raycast (ray, out hit, 500, RayCastMask)) {
@@ -663,16 +666,15 @@ public class AiInterface : MonoBehaviour {
 
 
 	public float[] GetCarStatusVector() {
-		float[] carStatusVector = new float[9]; // length = sum(#) ~=18
-		carStatusVector[0] = Car.velocity/200.0f; // car velocity > split up into more nodes 	# 1      //why do we need both the velocity and the speed from GetSpeedSteer?
-		carStatusVector[1] = Car.GetSlip(Car.colliderFL)[0]; // wheel rotation relative to car	# 1
-		carStatusVector[2] = Car.GetSlip(Car.colliderFR)[0]; // wheel rotation relative to car	# 1
-		carStatusVector[3] = Car.GetSlip(Car.colliderRL)[0]; // wheel rotation relative to car	# 1
-		carStatusVector[4] = Car.GetSlip(Car.colliderRR)[0]; // wheel rotation relative to car  # 1
-		carStatusVector[5] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
-		carStatusVector[6] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
-		carStatusVector[7] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
-		carStatusVector[8] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
+		float[] carStatusVector = new float[8]; // length = sum(#) ~=18
+		carStatusVector[0] = Car.GetSlip(Car.colliderFL)[0]; // wheel rotation relative to car	# 1
+		carStatusVector[1] = Car.GetSlip(Car.colliderFR)[0]; // wheel rotation relative to car	# 1
+		carStatusVector[2] = Car.GetSlip(Car.colliderRL)[0]; // wheel rotation relative to car	# 1
+		carStatusVector[3] = Car.GetSlip(Car.colliderRR)[0]; // wheel rotation relative to car  # 1
+		carStatusVector[4] = Car.GetSlip(Car.colliderFL)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[5] = Car.GetSlip(Car.colliderFR)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[6] = Car.GetSlip(Car.colliderRL)[1]; // wheel rotation relative to car	# 1
+		carStatusVector[7] = Car.GetSlip(Car.colliderRR)[1]; // wheel rotation relative to car  # 1
 		// front wheel rotation relative to centerLine rotation									# 2
 		// car rotation relative to centerLine rotation											# 2
 		// car rotation relative to velocity vector												# 1

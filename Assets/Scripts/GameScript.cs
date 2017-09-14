@@ -137,7 +137,7 @@ public class GameScript : MonoBehaviour {
 		}
 
 		if (newMode == "driving") {
-			mode = new string[2]{ "driving", "keyboarddriving" };  
+			mode = new string[2]{ "driving", "keyboarddriving"};  
 		} else
 
 		if (newMode == "train_AI") {
