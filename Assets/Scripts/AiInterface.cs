@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-
+ 
 public static class Consts { //TODO: diese hier an python schicken!
 	public const bool DEBUG_DISABLEGUI_AIMODE = true;    //a bug in Unity causes it to crash if GUI elements are updated to often... 
 	public const bool DEBUG_DISABLEGUI_HUMANMODE = false; //according to my ticket https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k, this is all fixed very soon
